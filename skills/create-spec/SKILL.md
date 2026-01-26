@@ -1,6 +1,7 @@
 ---
 name: create-spec
 description: Generate technical specification from product blueprint. Use when you have a product blueprint and need to define system architecture, components, types, and contracts for spec-driven development.
+user-invocable: true
 ---
 
 # Technical Spec
