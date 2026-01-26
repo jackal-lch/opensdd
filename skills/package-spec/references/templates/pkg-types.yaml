@@ -1,0 +1,75 @@
+# Package Template: Types
+# Creates all shared type definitions
+
+package:
+  id: pkg-01-types
+  type: types
+  language: "{spec.tech_stack.language}"
+  build_order: "01"
+  depends_on:
+    - pkg-00-scaffold
+
+scope:
+  description: "All shared type definitions from spec"
+
+  files:
+    - path: "{types_file_path}"
+      purpose: "Type definitions"
+
+  types_to_define:
+    # List all types from spec.types
+    - name: "{type_name}"
+      for: "{type_purpose}"
+      category: "{domain|input|output|error|event}"
+
+context:
+  types:
+    # Copy ALL from spec.types with purpose
+    "{type_name}":
+      for: "{type_purpose}"
+      used: ["{where_used}"]
+
+  conventions:
+    type_case: "{spec.conventions.type_case}"
+
+instructions:
+  purpose: |
+    Create all type definitions:
+    1. Define all types from spec.types
+    2. Types have PURPOSE (for), AI infers FIELDS
+    3. Group by category if appropriate
+    4. Include documentation
+
+  constraints:
+    - "Use exact type names from spec"
+    - "Follow spec.conventions.type_case"
+    - "All types must be exportable/public"
+
+  on_missing_info: BLOCK
+
+  never_fake:
+    - "No empty type stubs"
+    - "No 'any' or equivalent escape hatches"
+
+verification:
+  # Types verification: import test - can we import all types without errors?
+  mode: import  # Special mode for types - just verify imports work
+
+  # No external prerequisites - just compile/import check
+  prerequisites: {}
+
+  scenarios:
+    - name: "types_importable"
+      description: "Verify all types can be imported without errors"
+      steps:
+        - action: "import"
+          module: "{types_file_path}"
+          expect_exports:
+            - "{type_name}"  # List all expected type exports
+      success_indicators:
+        - "Module imports without syntax errors"
+        - "All type names from spec are exported"
+        - "No 'any' or undefined types"
+        - "Type checker passes (if applicable)"
+
+  do_not_call: []  # No functions - types only

@@ -1,0 +1,37 @@
+{
+  "name": "opensdd-marketplace",
+  "owner": {
+    "name": "jackal-lch",
+    "url": "https://github.com/jackal-lch"
+  },
+  "metadata": {
+    "description": "OpenSDD - Spec-Driven Development toolkit for Claude Code",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "opensdd",
+      "source": "./",
+      "description": "Spec-Driven Development that actually works. Define specs, implement with AI, and automatically detect and fix when code drifts from contracts.",
+      "version": "0.1.0",
+      "author": {
+        "name": "jackal-lch",
+        "url": "https://github.com/jackal-lch"
+      },
+      "homepage": "https://github.com/jackal-lch/opensdd",
+      "repository": "https://github.com/jackal-lch/opensdd",
+      "license": "MIT",
+      "keywords": [
+        "sdd",
+        "spec-driven-development",
+        "specification",
+        "contracts",
+        "verification",
+        "drift-detection",
+        "blueprint",
+        "code-generation"
+      ],
+      "category": "development-workflow"
+    }
+  ]
+}

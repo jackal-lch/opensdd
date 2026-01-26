@@ -1,0 +1,269 @@
+# Schema for .opensdd/compare.report.yaml
+# SINGLE SOURCE OF TRUTH for compare-spec output format.
+#
+# Referenced by:
+#   - skills/compare-spec/references/phases/phase-01-compare.md (producer)
+#   - agents/compare-agent.md (producer)
+#   - skills/fix-spec/references/phases/phase-01-initialize.md (consumer)
+#
+# All producers and consumers must conform to this schema.
+
+type: object
+required: [status, timestamp, spec_file, summary, components]
+properties:
+  status:
+    type: string
+    enum: [success, error]
+    description: Whether comparison completed successfully
+
+  timestamp:
+    type: string
+    format: date-time
+    description: ISO 8601 timestamp of when comparison was run
+
+  spec_file:
+    type: string
+    description: Path to spec.yaml that was compared against
+
+  error:
+    type: string
+    description: Error description (only if status=error)
+
+  details:
+    type: string
+    description: Additional error context (only if status=error)
+
+  summary:
+    type: object
+    required: [total_components, total_types, matches, drifts, missing, total_extras]
+    properties:
+      total_components:
+        type: integer
+        description: Total number of components in spec.yaml
+      total_types:
+        type: integer
+        description: Total number of types in spec.yaml
+      matches:
+        type: integer
+        description: Items where code matches spec exactly
+      drifts:
+        type: integer
+        description: Items where code exists but differs from spec
+      missing:
+        type: integer
+        description: Items in spec with no code implementation
+      total_extras:
+        type: integer
+        description: Total extra items in code not in spec
+      extras_by_type:
+        type: object
+        properties:
+          helper:
+            type: integer
+            description: Helper functions used by spec functions
+          infrastructure:
+            type: integer
+            description: Language requirements (error types, interfaces)
+          test:
+            type: integer
+            description: Test/debug utilities
+          new_functionality:
+            type: integer
+            description: Standalone business logic not in spec
+
+  components:
+    type: object
+    additionalProperties:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [match, drift, missing]
+          description: Overall component status
+        layer:
+          type: string
+          description: Component's layer (domain, application, infrastructure)
+        matched_file:
+          type: string
+          nullable: true
+          description: Path to the source file that implements this component
+        provides:
+          type: object
+          additionalProperties:
+            type: object
+            required: [status, confidence]
+            properties:
+              status:
+                type: string
+                enum: [match, drift, missing]
+              confidence:
+                type: string
+                enum: [high, medium, low]
+              matched_to:
+                type: string
+                nullable: true
+                description: Name of the extracted function this matched to
+              drift_type:
+                type: string
+                enum: [naming, param, return, structural]
+                nullable: true
+                description: Type of drift (only if status=drift)
+              spec_expects:
+                type: string
+                description: Exact signature from spec
+              code_has:
+                type: string
+                nullable: true
+                description: Exact signature from code (null if missing)
+              suggested_fix:
+                type: string
+                nullable: true
+                description: Recommended action to fix drift
+
+  types:
+    type: object
+    description: Comparison results for spec-defined types
+    additionalProperties:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [match, drift, missing]
+        matched_to:
+          type: string
+          nullable: true
+          description: Name of the extracted type this matched to
+        spec_expects:
+          type: string
+          description: Type definition from spec
+        code_has:
+          type: string
+          nullable: true
+          description: Type definition from code (null if missing)
+
+  extras:
+    type: array
+    items:
+      type: object
+      required: [item, kind, file, classification]
+      properties:
+        item:
+          type: string
+          description: Function or type name
+        kind:
+          type: string
+          enum: [function, type, method]
+          description: What kind of code item this is
+        signature:
+          type: string
+          description: Full signature
+        file:
+          type: string
+          description: Source file path
+        line:
+          type: integer
+          description: Line number in source file
+        classification:
+          type: string
+          enum: [helper, infrastructure, test, new_functionality]
+          description: How this extra is classified
+        used_by:
+          type: array
+          items:
+            type: string
+          description: List of spec functions that use this extra
+
+# Example output:
+#
+# status: "success"
+# timestamp: "2024-01-27T10:30:00Z"
+# spec_file: ".opensdd/spec.yaml"
+#
+# summary:
+#   total_components: 5
+#   total_types: 2
+#   matches: 3
+#   drifts: 1
+#   missing: 1
+#   total_extras: 4
+#   extras_by_type:
+#     helper: 2
+#     infrastructure: 1
+#     new_functionality: 1
+#
+# components:
+#   UserService:
+#     status: match
+#     layer: application
+#     matched_file: src/services/user_service.py
+#     provides:
+#       get_user:
+#         status: match
+#         confidence: high
+#         matched_to: get_user
+#         spec_expects: "get_user(user_id: str) -> User"
+#         code_has: "get_user(user_id: str) -> User"
+#       create_user:
+#         status: match
+#         confidence: high
+#         matched_to: create_user
+#         spec_expects: "create_user(data: UserInput) -> User"
+#         code_has: "create_user(data: UserInput) -> User"
+#
+#   OrderService:
+#     status: drift
+#     layer: application
+#     matched_file: src/services/order_service.py
+#     provides:
+#       create_order:
+#         status: drift
+#         confidence: high
+#         matched_to: create_order
+#         drift_type: param
+#         spec_expects: "create_order(user_id: str, items: List[Item]) -> Order"
+#         code_has: "create_order(userId: str, orderItems: List[Item]) -> Order"
+#         suggested_fix: "Rename parameters: userId → user_id, orderItems → items"
+#
+#   PaymentService:
+#     status: missing
+#     layer: application
+#     matched_file: null
+#     provides:
+#       process_payment:
+#         status: missing
+#         confidence: high
+#         matched_to: null
+#         spec_expects: "process_payment(order_id: str, amount: float) -> Receipt"
+#         code_has: null
+#         suggested_fix: "Implement process_payment function"
+#
+# types:
+#   User:
+#     status: match
+#     matched_to: User
+#     spec_expects: "User { id: str, name: str, email: str }"
+#     code_has: "User { id: str, name: str, email: str }"
+#   Order:
+#     status: drift
+#     matched_to: Order
+#     spec_expects: "Order { id: str, user_id: str, items: List[Item], total: float }"
+#     code_has: "Order { id: str, userId: str, items: List[Item], total: float }"
+#
+# extras:
+#   - item: validate_email
+#     kind: function
+#     signature: "validate_email(email: str) -> bool"
+#     file: src/services/user_service.py
+#     line: 45
+#     classification: helper
+#     used_by: [create_user]
+#
+#   - item: format_currency
+#     kind: function
+#     signature: "format_currency(amount: float) -> str"
+#     file: src/utils/formatters.py
+#     line: 12
+#     classification: new_functionality
+#     used_by: []

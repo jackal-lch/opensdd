@@ -1,0 +1,439 @@
+# Schema for .opensdd/fix.report.yaml
+# SINGLE SOURCE OF TRUTH for fix-spec output format.
+#
+# Referenced by:
+#   - skills/fix-spec/references/phases/phase-04-reconcile.md (producer)
+#
+# All producers and consumers must conform to this schema.
+
+type: object
+required: [metadata, initial_state, actions, final_state, status]
+properties:
+  metadata:
+    type: object
+    required: [timestamp, spec_file, compare_result]
+    properties:
+      timestamp:
+        type: string
+        format: date-time
+        description: ISO 8601 timestamp of when fix-spec was run
+      spec_file:
+        type: string
+        description: Path to spec.yaml that was used
+      compare_result:
+        type: string
+        description: Path to compare.report.yaml that was processed
+      duration_seconds:
+        type: number
+        description: Total duration of fix-spec workflow
+
+  initial_state:
+    type: object
+    description: State from Phase 1 before any fixes
+    required: [summary]
+    properties:
+      summary:
+        type: object
+        required: [matches, drifts, missing, extras_total, extras_new_functionality]
+        properties:
+          matches:
+            type: integer
+          drifts:
+            type: integer
+          missing:
+            type: integer
+          extras_total:
+            type: integer
+          extras_new_functionality:
+            type: integer
+      drifts:
+        type: array
+        items:
+          type: object
+          properties:
+            component:
+              type: string
+            function:
+              type: string
+            drift_type:
+              type: string
+              enum: [naming, param, return, structural]
+            spec_expects:
+              type: string
+            code_has:
+              type: string
+      missing:
+        type: array
+        items:
+          type: object
+          properties:
+            component:
+              type: string
+            function:
+              type: string
+      extras_to_evaluate:
+        type: array
+        description: Raw list of new_functionality extras from compare.report (visibility determined in Phase 3)
+        items:
+          type: object
+          properties:
+            item:
+              type: string
+            file:
+              type: string
+
+  actions:
+    type: object
+    description: Actions taken during Phase 3
+    properties:
+      drifts_fixed:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                component:
+                  type: string
+                function:
+                  type: string
+                action:
+                  type: string
+                  description: "e.g., 'renamed from X to Y'"
+                status:
+                  type: string
+                  enum: [SUCCESS, FAILED]
+
+      drifts_failed:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                component:
+                  type: string
+                function:
+                  type: string
+                error:
+                  type: string
+
+      missing_built:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                component:
+                  type: string
+                function:
+                  type: string
+                file:
+                  type: string
+                status:
+                  type: string
+                  enum: [SUCCESS, BLOCKED]
+
+      missing_blocked:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                component:
+                  type: string
+                function:
+                  type: string
+                blocked_reason:
+                  type: string
+
+      extras_promoted:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                item:
+                  type: string
+                visibility:
+                  type: string
+                  enum: [USER_FACING, INTERNAL]
+                  description: Whether the function is user-facing or internal
+                blueprint_verified:
+                  type: boolean
+                  description: Whether the feature was verified in blueprint before promotion
+                promoted_to:
+                  type: string
+                  description: "e.g., 'components.Analytics.provides.track_event'"
+                spec_entry:
+                  type: object
+                  description: The entry added to spec (boundaries only, no implementation details)
+                  properties:
+                    for:
+                      type: string
+                      description: "WHAT/WHY only, never HOW"
+                    input:
+                      type: string
+                    output:
+                      type: string
+
+      extras_deleted:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                item:
+                  type: string
+                file:
+                  type: string
+                reason:
+                  type: string
+
+      extras_kept:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                item:
+                  type: string
+                classification:
+                  type: string
+                  enum: [helper, infrastructure, test]
+                reason:
+                  type: string
+
+      escalations_resolved:
+        type: object
+        properties:
+          count:
+            type: integer
+          details:
+            type: array
+            items:
+              type: object
+              properties:
+                item:
+                  type: string
+                visibility:
+                  type: string
+                  enum: [USER_FACING, INTERNAL]
+                  description: Whether the function is user-facing or internal
+                escalation_type:
+                  type: string
+                  enum: [SCOPE_CREEP, UNCERTAIN]
+                  description: |
+                    SCOPE_CREEP: User-facing feature not in blueprint
+                    UNCERTAIN: General uncertainty in classification
+                user_decision:
+                  type: string
+                  enum: [ADD_TO_PRODUCT, PROMOTE, DELETE, KEEP_INFORMAL, KEEP]
+                  description: |
+                    ADD_TO_PRODUCT: User added feature to blueprint, then spec
+                    PROMOTE: Promoted directly to spec (internal or already in blueprint)
+                    DELETE: Removed from code
+                    KEEP_INFORMAL: Left in code without spec entry (tech debt)
+                    KEEP: Left in code (reclassified as helper/infrastructure)
+                blueprint_updated:
+                  type: boolean
+                  description: Whether blueprint was updated (only for SCOPE_CREEP -> ADD_TO_PRODUCT)
+
+  final_state:
+    type: object
+    description: State from Phase 4 after all fixes
+    required: [summary]
+    properties:
+      summary:
+        type: object
+        required: [matches, drifts, missing, extras_total]
+        properties:
+          matches:
+            type: integer
+          drifts:
+            type: integer
+          missing:
+            type: integer
+          extras_total:
+            type: integer
+      remaining_issues:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [drift, missing, blocked, failed]
+            component:
+              type: string
+            function:
+              type: string
+            reason:
+              type: string
+
+  spec_changes:
+    type: object
+    description: Changes made to spec.yaml
+    properties:
+      functions_added:
+        type: array
+        items:
+          type: object
+          properties:
+            component:
+              type: string
+            function:
+              type: string
+            for:
+              type: string
+      types_added:
+        type: array
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            for:
+              type: string
+
+  status:
+    type: string
+    enum: [CLEAN, PARTIAL, ISSUES_REMAIN]
+    description: |
+      CLEAN: All issues resolved, code matches spec
+      PARTIAL: Most issues resolved, some remain
+      ISSUES_REMAIN: Significant issues still present
+
+  status_summary:
+    type: string
+    description: Human-readable summary of final status
+
+# Example output:
+#
+# metadata:
+#   timestamp: "2024-01-30T12:00:00Z"
+#   spec_file: ".opensdd/spec.yaml"
+#   compare_result: ".opensdd/compare.report.yaml"
+#   duration_seconds: 180
+#
+# initial_state:
+#   summary:
+#     matches: 10
+#     drifts: 2
+#     missing: 1
+#     extras_total: 5
+#     extras_new_functionality: 2
+#   drifts:
+#     - component: UserService
+#       function: getUser
+#       drift_type: naming
+#       spec_expects: "getUser(id: str) -> User"
+#       code_has: "get_user(id: str) -> User"
+#   missing:
+#     - component: Analytics
+#       function: track_event
+#   extras_to_evaluate:
+#     # Note: visibility is determined in Phase 3, not stored in initial_state
+#     - item: send_welcome_email
+#       file: src/notifications.py
+#     - item: _calculate_discount
+#       file: src/pricing.py
+#
+# actions:
+#   drifts_fixed:
+#     count: 2
+#     details:
+#       - component: UserService
+#         function: getUser
+#         action: "renamed from get_user to getUser"
+#         status: SUCCESS
+#
+#   missing_built:
+#     count: 1
+#     details:
+#       - component: Analytics
+#         function: track_event
+#         file: src/analytics/tracker.py
+#         status: SUCCESS
+#
+#   extras_promoted:
+#     count: 2
+#     details:
+#       - item: send_welcome_email
+#         visibility: USER_FACING
+#         blueprint_verified: true  # Was already in blueprint
+#         promoted_to: components.Notifications.provides.send_welcome_email
+#         spec_entry:
+#           # NOTE: `for` captures WHAT/WHY, never HOW (no implementation details)
+#           for: "sends welcome email to user"
+#           input: UserId
+#           output: bool
+#       - item: _calculate_discount
+#         visibility: INTERNAL
+#         blueprint_verified: true  # Serves "dynamic pricing" feature
+#         promoted_to: components.Pricing.provides.calculate_discount
+#         spec_entry:
+#           for: "calculates discount for order"
+#           input: Order
+#           output: float
+#
+#   extras_deleted:
+#     count: 1
+#     details:
+#       - item: legacy_import
+#         file: src/utils/migration.py
+#         reason: "Not in blueprint, no dependencies"
+#
+#   escalations_resolved:
+#     count: 1
+#     details:
+#       - item: export_user_data
+#         visibility: USER_FACING
+#         escalation_type: SCOPE_CREEP
+#         user_decision: ADD_TO_PRODUCT
+#         blueprint_updated: true  # User added feature to blueprint first
+#
+# final_state:
+#   summary:
+#     matches: 15
+#     drifts: 0
+#     missing: 0
+#     extras_total: 3
+#   remaining_issues: []
+#
+# spec_changes:
+#   functions_added:
+#     - component: Notifications
+#       function: send_welcome_email
+#       for: "sends welcome email to user"  # WHAT, not HOW
+#   types_added: []
+#   # NOTE: Types have `for` (purpose) only, never field definitions
+#
+# status: CLEAN
+# status_summary: "All issues resolved. Code now matches spec."

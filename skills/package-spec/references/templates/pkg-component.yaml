@@ -1,0 +1,163 @@
+# Package Template: Component
+# Creates one component with full context
+
+package:
+  id: "pkg-{NN}-{component_name}"
+  type: component
+  language: "{spec.tech_stack.language}"
+  build_order: "{NN}"
+  depends_on:
+    - pkg-01-types
+    # Add consumed component package IDs
+
+scope:
+  description: "{component.for}"
+
+  component:
+    name: "{component_name}"
+    for: "{component.for}"
+    layer: "{component.layer}"
+
+  files:
+    - path: "{component_file_path}"
+      purpose: "Component implementation"
+
+context:
+  # Reference types needed by this component
+  types:
+    - ref: "spec.types.{type_name}"
+
+  # Reference consumed components
+  dependencies:
+    - ref: "spec.components.{consumed_component}"
+
+  # Relevant flows from blueprint
+  flows:
+    - name: "{flow_name}"
+      steps:
+        - "{relevant_step}"
+      edge_cases:
+        - "{error_condition}"
+
+  # External SDK/API (if any)
+  external: null
+  # external:
+  #   "{sdk_name}":
+  #     package: "{package_name}"
+  #     docs: "{url}"
+
+instructions:
+  purpose: |
+    Implement {component_name}:
+    - {component.for}
+
+    Functions to implement:
+    {list from component.provides}
+
+    Events to emit:
+    {list from component.emits}
+
+    Events to handle:
+    {list from component.subscribes}
+
+  constraints:
+    - "Inject dependencies, do not instantiate directly"
+    - "Use types from pkg-01-types"
+    - "Follow flows from context for business logic"
+
+  on_missing_info: BLOCK
+
+  never_fake:
+    - "No in-memory storage if spec says database"
+    - "No placeholder implementations"
+    - "No mocked external services"
+
+verification:
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # PREREQUISITES: What must exist before probing (OPTIONAL - only if needed)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Not every component needs prerequisites!
+  # - Pure logic components: No prerequisites
+  # - Database components: May need DB connection
+  # - External API components: Need credentials
+  #
+  # If empty or omitted → No blocking prerequisites, just run tests
+  prerequisites:
+    env_vars: []      # Only list if component needs external credentials
+    services: []      # Only list if component needs external services
+    files: []         # Only list if component needs config files
+  #
+  # Example for a component that DOES need prerequisites:
+  # prerequisites:
+  #   env_vars:
+  #     - name: "DATABASE_URL"
+  #       purpose: "Database connection string"
+  #   services:
+  #     - name: "PostgreSQL"
+  #       check: "pg_isready -h localhost"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SETUP: Steps to prepare before probing (run once)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  setup:
+    - step: "Description of setup step"
+      command: "bash command or code to run"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SCENARIOS: Real integration tests with concrete expected outcomes
+  # ═══════════════════════════════════════════════════════════════════════════════
+  scenarios:
+    - name: "{scenario_name}"
+      description: |
+        What this scenario tests in plain language.
+        Example: "Connect to HiAgent platform and send a real query"
+
+      steps:
+        - action: "call"
+          function: "{function_name}"
+          inputs:
+            "{param}": "{real_value}"
+
+        - action: "verify"
+          expect: |
+            Concrete, observable outcome. NOT abstract.
+            BAD:  "returns object with fields"
+            GOOD: "returns response containing agent_id, response text is non-empty,
+                   response.status == 'success'"
+
+      success_indicators:
+        # Concrete things that PROVE it works
+        - "Response contains valid agent_id (UUID format)"
+        - "Response text is non-empty and relevant to query"
+        - "No timeout or connection errors"
+        - "Response time < 30 seconds"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # DO NOT CALL: Functions with dangerous side effects
+  # ═══════════════════════════════════════════════════════════════════════════════
+  do_not_call:
+    - function: "{function_name}"
+      reason: "Why it's dangerous (e.g., deletes data, sends emails, charges money)"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # ABSOLUTE RULE: If prerequisites aren't met → BLOCK
+  # There is NO other option. NEVER skip. NEVER mock. NEVER fake.
+  # ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BUILDS SECTION (appended by build-spec, not created by package-spec)
+# ═══════════════════════════════════════════════════════════════════════════════
+# After build-spec runs, this section is appended to track build history:
+#
+# builds:
+#   final_status: GREEN | BLOCKED
+#   attempts: 1
+#   history:
+#     - attempt: 1
+#       build_status: SUCCESS
+#       probe_classification: GREEN
+#       probe_log: |
+#         [raw execution log]
+#       fix_hints: null
+#
+# This allows tracing every build attempt in a single file.

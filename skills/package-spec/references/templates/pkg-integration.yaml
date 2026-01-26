@@ -1,0 +1,108 @@
+# Package Template: Integration
+# Wires everything together: entry points, routers, startup
+
+package:
+  id: pkg-99-integration
+  type: integration
+  language: "{spec.tech_stack.language}"
+  build_order: "99"
+  depends_on:
+    - pkg-01-types
+    # List all component package IDs
+
+scope:
+  description: "Application entry point and component wiring"
+
+  files:
+    - path: "{entry_point_path}"
+      purpose: "Application entry point"
+    - path: "{router_path}"
+      purpose: "HTTP/API router"
+      optional: true
+
+context:
+  # All components to wire
+  components:
+    - ref: "spec.components.{component_name}"
+
+  # Entry points from spec
+  entry_points:
+    - type: "{http|cli|worker}"
+      config: "{relevant_config}"
+
+instructions:
+  purpose: |
+    Wire the application:
+    1. Create dependency injection / component wiring
+    2. Set up HTTP routes / CLI commands / workers
+    3. Configure startup hooks
+    4. Create main entry point
+
+  constraints:
+    - "Wire all components via dependency injection"
+    - "No component instantiates its dependencies directly"
+    - "Handle graceful shutdown"
+
+  on_missing_info: BLOCK
+
+  never_fake:
+    - "No hardcoded configuration"
+    - "No skipped components"
+
+verification:
+  # Integration verification: app starts, components wire, health check passes
+  #
+  # Prerequisites depend on what components need:
+  # - If all components are pure logic: No prerequisites
+  # - If components use database: Need DB connection
+  # - If components use external APIs: Need those credentials
+  #
+  # Only declare what's actually needed!
+  prerequisites:
+    env_vars: []      # Only list if components need external credentials
+    services: []      # Only list if components need external services
+  #
+  # Example for an app that DOES need prerequisites:
+  # prerequisites:
+  #   env_vars:
+  #     - name: "DATABASE_URL"
+  #       purpose: "Database connection"
+  #   services:
+  #     - name: "PostgreSQL"
+  #       check: "pg_isready -h localhost"
+
+  scenarios:
+    - name: "app_initializes"
+      description: "Application factory creates app without errors, all components wire"
+      steps:
+        - action: "call"
+          function: "{app_factory_function}"
+          inputs: {}
+        - action: "verify"
+          expect: "Returns app instance without throwing"
+      success_indicators:
+        - "App factory returns without errors"
+        - "All component dependencies resolved"
+        - "No missing imports or undefined references"
+
+    - name: "health_check_passes"
+      description: "Health endpoint returns success status"
+      steps:
+        - action: "call"
+          function: "{health_check_function}"
+          inputs: {}
+        - action: "verify"
+          expect: "Returns status: 'healthy' or equivalent"
+      success_indicators:
+        - "Health check returns success status"
+        - "Database connection verified"
+        - "Response time < 1 second"
+
+  do_not_call:
+    - function: "{server_start_function}"
+      reason: "Blocks forever - starts HTTP listener"
+    - function: "{migration_function}"
+      reason: "Side effect - modifies database schema"
+
+  # ABSOLUTE RULE: If prerequisites aren't met → BLOCK
+  # There is NO other option. NEVER skip. NEVER mock. NEVER fake.

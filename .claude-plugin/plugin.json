@@ -1,0 +1,24 @@
+{
+  "name": "opensdd",
+  "version": "0.1.0",
+  "description": "Spec-Driven Development toolkit that prevents code drift through continuous verification. Define specs, implement with AI, and automatically detect and fix when code diverges from contracts.",
+  "author": {
+    "name": "jackal-lch",
+    "url": "https://github.com/jackal-lch"
+  },
+  "repository": "https://github.com/jackal-lch/opensdd",
+  "homepage": "https://github.com/jackal-lch/opensdd",
+  "license": "MIT",
+  "keywords": [
+    "sdd",
+    "spec-driven-development",
+    "specification",
+    "contracts",
+    "verification",
+    "drift-detection",
+    "blueprint",
+    "code-generation"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

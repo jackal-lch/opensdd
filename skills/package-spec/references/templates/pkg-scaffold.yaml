@@ -1,0 +1,94 @@
+# Package Template: Scaffold
+# Creates project infrastructure: directories, configs, dependencies
+
+package:
+  id: pkg-00-scaffold
+  type: scaffold
+  language: "{spec.tech_stack.language}"
+  build_order: "00"
+  depends_on: []
+
+scope:
+  description: "Project structure, configuration files, and infrastructure"
+
+  directories:
+    # List all directories to create
+    - "{spec.structure.root}"
+    - "{spec.structure.layers.*}"
+
+  files:
+    # List all config files to create
+    - path: "{project_config_file}"
+      purpose: "Dependency manifest"
+    - path: ".env.example"
+      purpose: "Environment template"
+    - path: ".gitignore"
+      purpose: "Git ignore patterns"
+
+context:
+  tech_stack:
+    language: "{spec.tech_stack.language}"
+    framework: "{spec.tech_stack.framework}"
+    database: "{spec.tech_stack.database}"
+
+  structure:
+    root: "{spec.structure.root}"
+    layout: "{spec.structure.layout}"
+    layers: "{spec.structure.layers}"
+
+  environment:
+    # List all environment variables needed
+    - name: "{env_var_name}"
+      description: "{env_var_description}"
+
+instructions:
+  purpose: |
+    Create project foundation:
+    1. Directory structure from spec.structure
+    2. Dependency manifest with required packages
+    3. Environment variable template
+    4. Git ignore file
+
+  constraints:
+    - "Use exact paths from spec.structure"
+    - "Include ALL dependencies needed by spec components"
+    - "Follow language conventions"
+
+  on_missing_info: BLOCK
+
+  never_fake:
+    - "No empty directories"
+    - "No placeholder dependencies"
+
+verification:
+  # Scaffold verification: file/directory existence checks
+  mode: filesystem  # Special mode for scaffold - no code execution
+
+  # No external prerequisites - just filesystem checks
+  prerequisites: {}
+
+  scenarios:
+    - name: "structure_exists"
+      description: "Verify all directories and config files were created"
+      steps:
+        - action: "check_exists"
+          paths:
+            - "{spec.structure.root}"
+            - "{project_config_file}"
+            - ".gitignore"
+      success_indicators:
+        - "All directories exist and are accessible"
+        - "Config files exist and are non-empty"
+        - "Config files are valid (parseable)"
+
+    - name: "dependencies_valid"
+      description: "Verify dependency manifest is complete"
+      steps:
+        - action: "parse_config"
+          file: "{project_config_file}"
+      success_indicators:
+        - "Dependency file parses without errors"
+        - "Required packages are listed"
+        - "Version constraints are valid"
+
+  do_not_call: []  # No functions to avoid - this is filesystem only
