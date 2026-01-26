@@ -1,0 +1,80 @@
+{
+  "agents": [
+    {
+      "id": "verify-compare",
+      "name": "Verify Compare",
+      "description": "Runs extract + semantic compare cycle for drift detection (build-loop Phase 3 steps 1-2)",
+      "file": "verify-compare.md",
+      "type": "single",
+      "use_case": "build-loop Phase 3: extract signatures and semantically compare against spec",
+      "inputs": {
+        "component_name": {
+          "type": "string",
+          "source": "state:current_component",
+          "required": true
+        },
+        "component_path": {
+          "type": "string",
+          "source": "derived from spec.structure",
+          "required": true
+        }
+      },
+      "output": {
+        "format": "json",
+        "schema": "verify-result"
+      },
+      "writes_to": ".opensdd/extracted/{component_name}.yaml",
+      "constraints": {
+        "reads_files": true,
+        "writes_files": true,
+        "runs_commands": true,
+        "user_interaction": false,
+        "state_mutation": false
+      },
+      "capabilities": {
+        "semantic_matching": "Matches by intent, not just string comparison",
+        "language_idiom_translation": "Normalizes signatures for TypeScript, Go, Rust, Python",
+        "structural_equivalence": "Recognizes equivalent structures (method vs function, etc.)",
+        "extra_classification": "Categorizes extras as helper, infrastructure, test, or new_functionality",
+        "confidence_levels": "Reports high/medium/low confidence for uncertain matches"
+      }
+    }
+  ],
+  "schemas": {
+    "verify-result": {
+      "description": "Semantic drift report with comparisons, confidence levels, and categorized extras",
+      "file": "verify-compare.md#output-schema",
+      "summary_fields": {
+        "matches": "Count of spec items found with compatible signatures",
+        "drifts": "Count of spec items found but needing fixes",
+        "missing": "Count of spec items not found in code",
+        "extras": {
+          "helpers": "Internal functions used by spec functions",
+          "infrastructure": "Language idiom requirements",
+          "test": "Testing/debugging utilities",
+          "new_functionality": "Genuinely new features not in spec"
+        }
+      },
+      "comparison_fields": {
+        "spec_item": "Name of item from spec",
+        "status": "match | drift | missing",
+        "matched_to": "Name of extracted item matched (or null)",
+        "confidence": "high | medium | low",
+        "details": {
+          "drift_type": "naming | param | return | structural",
+          "spec_expects": "Exact signature from spec",
+          "code_has": "Exact signature from code",
+          "difference": "What specifically differs",
+          "suggested_fix": "Action to resolve drift"
+        }
+      }
+    }
+  },
+  "design_principles": {
+    "semantic_understanding": "AI uses intent and purpose to match, not string comparison",
+    "language_awareness": "Idiom translation handles cross-language differences",
+    "actionable_output": "Every drift includes suggested_fix for the fix step",
+    "context_isolation": "Agent prevents main conversation from growing during iterations",
+    "tool_trust": "Trusts spec-extract for extraction, AI adds semantic layer"
+  }
+}

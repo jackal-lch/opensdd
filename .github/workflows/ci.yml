@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-spec-extract:
+    name: Build spec-extract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/spec-extract
+
+      - name: Build
+        working-directory: tools/spec-extract
+        run: cargo build --release
+
+      - name: Run tests
+        working-directory: tools/spec-extract
+        run: cargo test
+
+  validate-plugin:
+    name: Validate plugin structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "Checking plugin structure..."
+          test -f ".claude-plugin/plugin.json" || (echo "Missing plugin.json" && exit 1)
+          test -f "README.md" || (echo "Missing README.md" && exit 1)
+          test -f "LICENSE" || (echo "Missing LICENSE" && exit 1)
+          test -d "skills" || (echo "Missing skills directory" && exit 1)
+          echo "Plugin structure valid"
+
+      - name: Validate plugin.json
+        run: |
+          echo "Validating plugin.json..."
+          python3 -c "
+          import json
+          with open('.claude-plugin/plugin.json') as f:
+              p = json.load(f)
+          assert 'name' in p, 'Missing name'
+          assert 'version' in p, 'Missing version'
+          assert 'description' in p, 'Missing description'
+          print(f\"Plugin: {p['name']} v{p['version']}\")
+          print('plugin.json valid')
+          "
+
+      - name: Check skill files
+        run: |
+          echo "Checking skills..."
+          for skill in skills/*/; do
+            if [ -d "$skill" ]; then
+              name=$(basename "$skill")
+              test -f "${skill}SKILL.md" || (echo "Missing SKILL.md in $name" && exit 1)
+              echo "  $name: OK"
+            fi
+          done
+          echo "All skills valid"
