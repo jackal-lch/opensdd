@@ -1,3 +1,8 @@
+---
+description: Extract code signatures and compare against spec for drift detection using semantic matching
+capabilities: ["semantic-comparison", "drift-detection", "code-extraction", "language-idiom-translation"]
+---
+
 # Agent: verify-compare
 
 Extract code signatures and compare against spec for drift detection using semantic matching.
