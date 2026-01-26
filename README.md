@@ -12,16 +12,18 @@
 ## Quick Start
 
 ```bash
-# 1. Add the plugin
-claude /plugin marketplace add jackal-lch/opensdd
-claude /plugin install opensdd
+# 1. Open Claude Code
+claude
 
-# 2. Install the spec-extract tool
+# 2. Add the marketplace and install the plugin
+/plugin marketplace add jackal-lch/opensdd
+/plugin install opensdd
+
+# 3. Install the spec-extract tool (in a separate terminal)
 curl -fsSL https://raw.githubusercontent.com/jackal-lch/opensdd/main/scripts/install-spec-extract.sh | bash
 
-# 3. Start building
-claude
-> /create-blueprint
+# 4. Start building
+/opensdd:blueprint
 ```
 
 ---
@@ -30,7 +32,7 @@ claude
 
 - [Why OpenSDD?](#why-opensdd)
 - [How It Works](#how-it-works)
-- [Skills](#skills)
+- [Commands](#commands)
 - [Installation](#installation)
 - [Example Session](#example-session)
 - [Supported Languages](#supported-languages)
@@ -58,14 +60,14 @@ The spec is the source of truth. Always.
 ## How It Works
 
 ```
-/create-blueprint  →  /create-spec  →  /build-loop
+/opensdd:blueprint  →  /opensdd:spec  →  /opensdd:build
 ```
 
-| Skill | What It Does |
-|-------|--------------|
-| `/create-blueprint` | Define your product (vision, users, features, flows) |
-| `/create-spec` | Generate technical contracts (components, types, interfaces) |
-| `/build-loop` | Implement and verify code matches spec |
+| Command | What It Does |
+|---------|--------------|
+| `/opensdd:blueprint` | Define your product (vision, users, features, flows) |
+| `/opensdd:spec` | Generate technical contracts (components, types, interfaces) |
+| `/opensdd:build` | Implement and verify code matches spec |
 
 The build loop runs continuously:
 
@@ -86,13 +88,14 @@ The build loop runs continuously:
 
 ---
 
-## Skills
+## Commands
 
-| Skill | Command | Purpose |
-|-------|---------|---------|
-| Create Blueprint | `/create-blueprint` | 8-phase guided product definition |
-| Create Spec | `/create-spec` | 4-phase technical specification |
-| Build Loop | `/build-loop` | Implement, verify, and fix loop |
+| Command | Purpose |
+|---------|---------|
+| `/opensdd:blueprint` | 8-phase guided product definition |
+| `/opensdd:spec` | 4-phase technical specification |
+| `/opensdd:build` | Implement, verify, and fix loop |
+| `/opensdd:cov` | Chain of verification for response validation |
 
 ---
 
@@ -105,10 +108,26 @@ The build loop runs continuously:
 
 ### Step 1: Install the Plugin
 
-```bash
-claude /plugin marketplace add jackal-lch/opensdd
-claude /plugin install opensdd
+Open Claude Code and run these commands:
+
 ```
+claude
+```
+
+Then inside Claude Code:
+
+```
+/plugin marketplace add jackal-lch/opensdd
+/plugin install opensdd
+```
+
+To verify installation:
+
+```
+/opensdd:
+```
+
+You should see `blueprint`, `spec`, `build`, and `cov` in the autocomplete.
 
 ### Step 2: Install spec-extract
 
@@ -137,15 +156,15 @@ spec-extract --version
 ```
 You: I want to build a task management CLI
 
-> /create-blueprint
+> /opensdd:blueprint
 [Interactive: vision, users, features, flows...]
 ✓ Created .opensdd/blueprint.md
 
-> /create-spec
+> /opensdd:spec
 [Interactive: components, types, contracts...]
 ✓ Created .opensdd/spec.yaml
 
-> /build-loop
+> /opensdd:build
 Phase 1: Select → TaskManager component
 Phase 2: Implement → AI writes code
 Phase 3: Verify → Extract and compare
