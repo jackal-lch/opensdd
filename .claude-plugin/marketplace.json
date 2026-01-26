@@ -31,7 +31,9 @@
         "blueprint",
         "code-generation"
       ],
-      "category": "development-workflow"
+      "category": "development-workflow",
+      "skills": "./skills/",
+      "commands": "./commands/"
     }
   ]
 }
