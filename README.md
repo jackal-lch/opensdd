@@ -7,6 +7,11 @@
   <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet" alt="Claude Code Plugin"></a>
 </p>
 
+<p align="center">
+  Define your product → Generate contracts → Build with continuous verification<br>
+  When code drifts from spec, it gets fixed automatically.
+</p>
+
 ---
 
 ## Quick Start
@@ -17,7 +22,7 @@ claude
 
 # 2. Add the marketplace and install the plugin
 /plugin marketplace add jackal-lch/opensdd
-/plugin install opensdd
+/plugin install opensdd@opensdd-marketplace
 
 # 3. Install the spec-extract tool (in a separate terminal)
 curl -fsSL https://raw.githubusercontent.com/jackal-lch/opensdd/main/scripts/install-spec-extract.sh | bash
