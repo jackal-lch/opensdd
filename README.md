@@ -1,11 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="OpenSDD Logo" width="200">
-</p>
-
-<h1 align="center">OpenSDD</h1>
-
-<p align="center">
-  <strong>Spec-Driven Development that actually works.</strong>
+  <img src="docs/assets/banner.png" alt="OpenSDD - Spec-Driven Development that actually works" width="800">
 </p>
 
 <p align="center">
