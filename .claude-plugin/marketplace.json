@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "opensdd",
-      "source": ".",
+      "source": "./.claude-plugin",
       "description": "Spec-Driven Development that actually works. Define specs, implement with AI, and automatically detect and fix when code drifts from contracts.",
       "version": "0.1.0",
       "author": {
