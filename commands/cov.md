@@ -1,7 +1,5 @@
 ---
-name: cov
 description: Apply chain of verification to validate and enhance Claude's responses
-user-invocable: true
 ---
 
 # Chain of Verification

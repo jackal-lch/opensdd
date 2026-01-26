@@ -20,5 +20,6 @@
     "code-generation"
   ],
   "skills": "./skills/",
-  "commands": "./commands/"
+  "commands": "./commands/",
+  "agents": "./agents/"
 }

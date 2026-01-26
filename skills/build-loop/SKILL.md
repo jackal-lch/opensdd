@@ -1,8 +1,6 @@
 ---
 name: build-loop
 description: Run the OpenSDD build loop - implement components from spec, extract signatures, compare against spec, fix drift. Use when you have .opensdd/spec.yaml and want to implement code or verify spec alignment.
-argument-hint: "[component-name]"
-user-invocable: true
 ---
 
 # Build Loop

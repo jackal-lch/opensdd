@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "opensdd",
-      "source": "../",
+      "source": "./",
       "description": "Spec-Driven Development that actually works. Define specs, implement with AI, and automatically detect and fix when code drifts from contracts.",
       "version": "0.1.0",
       "author": {
@@ -31,9 +31,7 @@
         "blueprint",
         "code-generation"
       ],
-      "category": "development-workflow",
-      "skills": "./skills/",
-      "commands": "./commands/"
+      "category": "development-workflow"
     }
   ]
 }

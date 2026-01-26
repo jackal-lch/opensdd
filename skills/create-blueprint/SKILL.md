@@ -1,7 +1,6 @@
 ---
 name: create-blueprint
 description: AI-guided blueprint creation for greenfield applications. Use when starting a new project, capturing product vision, or when users need help articulating what they want to build.
-user-invocable: true
 ---
 
 # Product Blueprint
