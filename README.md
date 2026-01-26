@@ -7,11 +7,6 @@
   <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet" alt="Claude Code Plugin"></a>
 </p>
 
-<p align="center">
-  Define your product → Generate contracts → Build with continuous verification<br>
-  When code drifts from spec, it gets fixed automatically.
-</p>
-
 ---
 
 ## Quick Start
