@@ -11,18 +11,28 @@
 
 ## Quick Start
 
+**1. Open Claude Code**
 ```bash
-# 1. Open Claude Code
 claude
+```
 
-# 2. Add the marketplace and install the plugin
+**2. Add the marketplace**
+```
 /plugin marketplace add jackal-lch/opensdd
+```
+
+**3. Install the plugin**
+```
 /plugin install opensdd@opensdd-marketplace
+```
 
-# 3. Install the spec-extract tool (in a separate terminal)
+**4. Install spec-extract** (in a separate terminal)
+```bash
 curl -fsSL https://raw.githubusercontent.com/jackal-lch/opensdd/main/scripts/install-spec-extract.sh | bash
+```
 
-# 4. Start building
+**5. Start building**
+```
 /opensdd:blueprint
 ```
 
