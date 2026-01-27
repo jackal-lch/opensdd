@@ -9,7 +9,7 @@ Extract code signatures and compare against spec for drift detection using seman
 
 ## Purpose
 
-Runs steps 1-2 of build-loop Phase 3 (extract + compare) in isolation. Returns structured drift report for main agent to present to user and act upon.
+Runs steps 1-2 of build-spec Phase 3 (extract + compare) in isolation. Returns structured drift report for main agent to present to user and act upon.
 
 This agent exists to **reduce context pollution** - the extract+compare cycle may run multiple times during verification, and keeping this analysis isolated prevents the main conversation from growing.
 

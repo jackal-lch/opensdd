@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-State manager for build-loop phased skill.
+State manager for build-spec phased skill.
 
 Usage:
     python state.py init --skill-root PATH  Initialize state file with skill root
@@ -16,7 +16,7 @@ Usage:
     python state.py complete-component      Mark current component as completed
     python state.py add-extra ...           Add extra item with classification
     python state.py get-extras              Get all extras grouped by classification
-    python state.py resolve-extra ...       Resolve extra with user decision
+    python state.py resolve-extra ...       Resolve extra with decision
     python state.py clear-extra INDEX       Clear an extra by index
 """
 
@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-SKILL_NAME = "build-loop"
+SKILL_NAME = "build-spec"
 STATE_DIR = Path(".opensdd")
 STATE_FILE = STATE_DIR / f"{SKILL_NAME}.state.yaml"
 
@@ -66,11 +66,14 @@ def cmd_init(args):
         "updated_at": datetime.now().isoformat(),
         "current_phase": 0,
         "phases": {},
-        # Build-loop specific state
+        # Build-spec specific state
         "all_components": [],
         "completed_components": [],
         "current_component": None,
-        "extras": []
+        "extras": [],
+        # Scaffold tracking
+        "scaffold_completed": False,
+        "scaffold_files": []
     }
     save_state(state)
     print(json.dumps({"status": "success", "message": f"Initialized state at {STATE_FILE}", "skill_root": args.skill_root}))
@@ -94,6 +97,7 @@ def cmd_status(args):
         "completed_components": state.get("completed_components", []),
         "current_component": state.get("current_component"),
         "extras_count": len(state.get("extras", [])),
+        "scaffold_completed": state.get("scaffold_completed", False),
         "updated_at": state["updated_at"]
     }, indent=2))
     return 0
@@ -165,6 +169,10 @@ def cmd_complete_phase(args):
     state["phases"][phase_key]["completed_at"] = datetime.now().isoformat()
     state["current_phase"] = args.phase + 1
     state["updated_at"] = datetime.now().isoformat()
+
+    # Mark scaffold as completed when phase 1 completes
+    if args.phase == 1:
+        state["scaffold_completed"] = True
 
     save_state(state)
     print(json.dumps({"status": "success", "phase": args.phase, "phase_status": "complete"}))
@@ -301,7 +309,7 @@ def cmd_add_extra(args):
 
 
 def cmd_resolve_extra(args):
-    """Resolve an extra item with user decision."""
+    """Resolve an extra item with decision."""
     state = load_state()
     if not state:
         print(json.dumps({"error": "No state file found"}))
@@ -387,6 +395,27 @@ def cmd_clear_extra(args):
     return 0
 
 
+def cmd_add_scaffold_file(args):
+    """Track a file created during scaffold."""
+    state = load_state()
+    if not state:
+        print(json.dumps({"error": "No state file found"}))
+        return 1
+
+    if "scaffold_files" not in state:
+        state["scaffold_files"] = []
+
+    state["scaffold_files"].append({
+        "path": args.path,
+        "type": args.type,
+        "created_at": datetime.now().isoformat()
+    })
+    state["updated_at"] = datetime.now().isoformat()
+    save_state(state)
+    print(json.dumps({"status": "success", "scaffold_file_added": args.path}))
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=f"State manager for {SKILL_NAME}")
     subparsers = parser.add_subparsers(dest="command", help="Commands")
@@ -451,13 +480,18 @@ def main():
     subparsers.add_parser("get-extras", help="Get all extras")
 
     # resolve-extra
-    resolve_parser = subparsers.add_parser("resolve-extra", help="Resolve an extra with user decision")
+    resolve_parser = subparsers.add_parser("resolve-extra", help="Resolve an extra with decision")
     resolve_parser.add_argument("--item", required=True, help="Item name to resolve")
-    resolve_parser.add_argument("--decision", required=True, choices=["add_to_spec", "keep_internal", "remove"], help="User decision")
+    resolve_parser.add_argument("--decision", required=True, choices=["add_to_spec", "keep_internal", "remove"], help="Decision")
 
     # clear-extra
     clear_parser = subparsers.add_parser("clear-extra", help="Clear an extra by index")
     clear_parser.add_argument("index", type=int, help="Index of extra to clear")
+
+    # add-scaffold-file
+    scaffold_parser = subparsers.add_parser("add-scaffold-file", help="Track scaffold file")
+    scaffold_parser.add_argument("--path", required=True, help="File path")
+    scaffold_parser.add_argument("--type", required=True, help="File type (config, entrypoint, type, deployment, test)")
 
     args = parser.parse_args()
 
@@ -481,6 +515,7 @@ def main():
         "get-extras": cmd_get_extras,
         "resolve-extra": cmd_resolve_extra,
         "clear-extra": cmd_clear_extra,
+        "add-scaffold-file": cmd_add_scaffold_file,
     }
 
     return commands[args.command](args)

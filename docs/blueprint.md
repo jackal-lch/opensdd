@@ -286,7 +286,7 @@ Both formats are contracts-only, enabling meaningful comparison.
 |-------|---------|
 | `/create-blueprint` | Generate product blueprint from user intent |
 | `/create-spec` | Generate technical spec from blueprint |
-| `/build-loop` | Run build loop: implement → extract → compare → fix |
+| `/build-spec` | Run build loop: implement → extract → compare → fix |
 
 ---
 

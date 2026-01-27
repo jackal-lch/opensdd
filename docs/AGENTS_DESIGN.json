@@ -3,10 +3,10 @@
     {
       "id": "verify-compare",
       "name": "Verify Compare",
-      "description": "Runs extract + semantic compare cycle for drift detection (build-loop Phase 3 steps 1-2)",
+      "description": "Runs extract + semantic compare cycle for drift detection (build-spec Phase 3 steps 1-2)",
       "file": "verify-compare.md",
       "type": "single",
-      "use_case": "build-loop Phase 3: extract signatures and semantically compare against spec",
+      "use_case": "build-spec Phase 3: extract signatures and semantically compare against spec",
       "inputs": {
         "component_name": {
           "type": "string",

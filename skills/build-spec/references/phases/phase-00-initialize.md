@@ -1,13 +1,13 @@
 ---
 phase: 0
 name: initialize
-next: phase-01-select.md
+next: phase-01-scaffold.md
 ---
 
 # Phase 0: Initialize
 
 <objective>
-Check prerequisites exist and bootstrap state tracking for the build loop.
+Check prerequisites exist and bootstrap state tracking for the build.
 </objective>
 
 <prerequisite>
@@ -23,13 +23,10 @@ No input from previous phase. This phase starts fresh.
 <step n="1" name="derive_skill_root">
 Note the full path of THIS file from the Read tool output.
 
-Example: If you read `/Users/dev/.claude/skills/build-loop/references/phases/phase-00-initialize.md`
+Example: If you read `/path/to/opensdd/skills/build-spec/references/phases/phase-00-initialize.md`
 
 Derive SKILL_ROOT by removing `/references/phases/phase-00-initialize.md`:
-- SKILL_ROOT = `/Users/dev/.claude/skills/build-loop`
-
-For OpenSDD repo location, it will be something like:
-- SKILL_ROOT = `/path/to/opensdd/skills/build-loop`
+- SKILL_ROOT = `/path/to/opensdd/skills/build-spec`
 </step>
 
 <step n="2" name="check_spec">
@@ -55,7 +52,7 @@ which spec-extract || echo "NOT_FOUND"
 ```
 
 If output is "NOT_FOUND":
-- Tell user: "spec-extract tool not found. Install it with: `./scripts/install-spec-extract.sh` (macOS/Linux) or `.\\scripts\\install-spec-extract.ps1` (Windows)"
+- Tell user: "spec-extract tool not found. Install with: `pip install spec-extract` or see opensdd documentation."
 - STOP workflow.
 
 If tool found:
@@ -76,41 +73,56 @@ If exit code != 0:
 If exit code == 0:
 - Copy state.py to .opensdd location:
   ```bash
-  cp $SKILL_ROOT/scripts/state.py .opensdd/build-loop.state.py
+  cp $SKILL_ROOT/scripts/state.py .opensdd/build-spec.state.py
   ```
 - Proceed
 </step>
 
 <step n="5" name="parse_spec">
-Parse spec.yaml to extract list of all components:
+Parse spec.yaml to extract metadata and component list:
 
 ```bash
-# Extract component names from spec.yaml
 python3 -c "
 import yaml
+import json
+
 with open('.opensdd/spec.yaml', 'r') as f:
     spec = yaml.safe_load(f)
+
+# Extract components
 components = list(spec.get('components', {}).keys())
-import json
-print(json.dumps(components))
+
+# Extract spec sections that have deliverables
+sections = {
+    'has_tech_stack': 'tech_stack' in spec,
+    'has_structure': 'structure' in spec,
+    'has_types': 'types' in spec and len(spec.get('types', {})) > 0,
+    'has_deployment': 'deployment' in spec,
+}
+
+print(json.dumps({
+    'components': components,
+    'sections': sections,
+    'language': spec.get('tech_stack', {}).get('language', 'unknown')
+}))
 "
 ```
 
-Store result in state:
+Store components in state:
 
 ```bash
-python .opensdd/build-loop.state.py set-components '[COMPONENTS_JSON]'
+python .opensdd/build-spec.state.py set-components '[COMPONENTS_JSON]'
 ```
 
-Replace `[COMPONENTS_JSON]` with the actual output from the Python command.
+Replace `[COMPONENTS_JSON]` with the components array from the output.
 </step>
 
 <step n="6" name="verify_state">
 Verify state file created correctly:
 
 ```bash
-test -f ".opensdd/build-loop.state.yaml" && echo "OK" || echo "FAILED"
-python .opensdd/build-loop.state.py status
+test -f ".opensdd/build-spec.state.yaml" && echo "OK" || echo "FAILED"
+python .opensdd/build-spec.state.py status
 ```
 
 If verification fails, fix before proceeding.
@@ -119,7 +131,11 @@ If verification fails, fix before proceeding.
 </steps>
 
 <output>
-State initialized with SKILL_ROOT, spec.yaml verified, all components parsed and stored in state.
+State initialized with:
+- SKILL_ROOT path stored
+- spec.yaml verified
+- All components parsed and stored
+- Spec sections identified for scaffold phase
 </output>
 
 <verify>
@@ -131,7 +147,7 @@ AI self-verification:
 | check_spec | spec.yaml exists | |
 | check_tool | spec-extract installed | |
 | init_state | State file created, state.py copied | |
-| parse_spec | Components list stored in state | |
+| parse_spec | Components and sections stored in state | |
 | verify_state | "OK" and status shown | |
 
 If any step failed:
@@ -150,11 +166,11 @@ No user approval needed. Auto-continue after verify passes.
 <next>
 1. Complete phase:
    ```bash
-   python .opensdd/build-loop.state.py complete-phase 0
+   python .opensdd/build-spec.state.py complete-phase 0
    ```
 
 2. Speak to user:
-   "Build loop initialized. Found [N] components in spec.yaml. Ready to begin implementation."
+   "Build initialized. Found [N] components in spec.yaml. Starting scaffold..."
 
-3. Load: `phase-01-select.md` (same folder)
+3. Load: `phase-01-scaffold.md` (same folder)
 </next>

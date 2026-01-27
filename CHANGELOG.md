@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Skills**
   - `/create-blueprint` - 8-phase guided product definition (vision, users, features, flows, data, integrations, constraints, assembly)
   - `/create-spec` - 4-phase technical specification generator (foundation, types, contracts, integrations)
-  - `/build-loop` - 5-phase implementation loop with automatic drift detection and fixing
+  - `/build-spec` - 5-phase implementation loop with automatic drift detection and fixing
 
 - **Agents**
   - `verify-compare` - Semantic comparison agent for drift detection with language idiom translation
