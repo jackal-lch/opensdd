@@ -266,8 +266,13 @@ No user approval needed. Auto-continue to verify phase.
 </checkpoint>
 
 <next>
-1. Speak:
+1. Mark component as implemented:
+   ```bash
+   python .opensdd/build-spec.state.py mark-implemented [COMPONENT_NAME]
+   ```
+
+2. Speak:
    "Implementation complete. Verifying alignment with spec..."
 
-2. Load: `phase-04-verify.md` (same folder)
+3. Load: `phase-04-verify.md` (same folder)
 </next>

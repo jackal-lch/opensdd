@@ -13,7 +13,9 @@ Usage:
     python state.py set-data N key value    Store data for phase N
     python state.py set-components JSON     Set all components list
     python state.py set-current NAME        Set current component
-    python state.py complete-component      Mark current component as completed
+    python state.py mark-implemented NAME   Mark component as implemented (Phase 3 done)
+    python state.py mark-verified NAME      Mark component as verified (Phase 4 done, requires extracted file)
+    python state.py complete-component      Mark current component as completed (requires verified status)
     python state.py add-extra ...           Add extra item with classification
     python state.py get-extras              Get all extras grouped by classification
     python state.py resolve-extra ...       Resolve extra with decision
@@ -70,6 +72,7 @@ def cmd_init(args):
         "all_components": [],
         "completed_components": [],
         "current_component": None,
+        "component_status": {},  # Tracks: selected -> implemented -> verified -> completed
         "extras": [],
         # Scaffold tracking
         "scaffold_completed": False,
@@ -96,6 +99,7 @@ def cmd_status(args):
         "all_components": state.get("all_components", []),
         "completed_components": state.get("completed_components", []),
         "current_component": state.get("current_component"),
+        "component_status": state.get("component_status", {}),
         "extras_count": len(state.get("extras", [])),
         "scaffold_completed": state.get("scaffold_completed", False),
         "updated_at": state["updated_at"]
@@ -247,11 +251,24 @@ def cmd_set_components(args):
 
 
 def cmd_set_current(args):
-    """Set current component."""
+    """Set current component. Fails if previous component wasn't completed."""
     state = load_state()
     if not state:
         print(json.dumps({"error": "No state file found"}))
         return 1
+
+    # Guard: If there's already a current component, it must be completed first
+    existing = state.get("current_component")
+    if existing and existing != args.component:
+        if existing not in state.get("completed_components", []):
+            comp_status = state.get("component_status", {}).get(existing, {})
+            print(json.dumps({
+                "error": f"Cannot select new component. Previous component '{existing}' was not completed.",
+                "previous_component": existing,
+                "previous_status": comp_status.get("status", "not_started"),
+                "hint": "You must complete Phase 4 (Verify) for the previous component first. Run mark-verified and complete-component."
+            }))
+            return 1
 
     state["current_component"] = args.component
     state["updated_at"] = datetime.now().isoformat()
@@ -260,8 +277,73 @@ def cmd_set_current(args):
     return 0
 
 
+def cmd_mark_implemented(args):
+    """Mark component as implemented (Phase 3 complete)."""
+    state = load_state()
+    if not state:
+        print(json.dumps({"error": "No state file found"}))
+        return 1
+
+    component = args.component
+    if "component_status" not in state:
+        state["component_status"] = {}
+
+    state["component_status"][component] = {
+        "status": "implemented",
+        "implemented_at": datetime.now().isoformat()
+    }
+    state["updated_at"] = datetime.now().isoformat()
+    save_state(state)
+    print(json.dumps({"status": "success", "component": component, "component_status": "implemented"}))
+    return 0
+
+
+def cmd_mark_verified(args):
+    """Mark component as verified (Phase 4 complete). Validates extracted file exists."""
+    state = load_state()
+    if not state:
+        print(json.dumps({"error": "No state file found"}))
+        return 1
+
+    component = args.component
+    extracted_file = args.extracted_file
+
+    # Validate extracted file exists
+    if not Path(extracted_file).exists():
+        print(json.dumps({
+            "error": f"Extracted file not found: {extracted_file}",
+            "hint": "You must run spec-extract before marking component as verified",
+            "component": component
+        }))
+        return 1
+
+    if "component_status" not in state:
+        state["component_status"] = {}
+
+    # Check component was implemented first
+    comp_status = state["component_status"].get(component, {})
+    if comp_status.get("status") not in ["implemented", "verified"]:
+        print(json.dumps({
+            "error": f"Component '{component}' must be implemented before it can be verified",
+            "current_status": comp_status.get("status", "not_started"),
+            "hint": "Run mark-implemented first"
+        }))
+        return 1
+
+    state["component_status"][component] = {
+        **comp_status,
+        "status": "verified",
+        "verified_at": datetime.now().isoformat(),
+        "extracted_file": extracted_file
+    }
+    state["updated_at"] = datetime.now().isoformat()
+    save_state(state)
+    print(json.dumps({"status": "success", "component": component, "component_status": "verified", "extracted_file": extracted_file}))
+    return 0
+
+
 def cmd_complete_component(args):
-    """Mark current component as completed."""
+    """Mark current component as completed. Requires component to be verified first."""
     state = load_state()
     if not state:
         print(json.dumps({"error": "No state file found"}))
@@ -271,6 +353,23 @@ def cmd_complete_component(args):
     if not component:
         print(json.dumps({"error": "No current component set"}))
         return 1
+
+    # Check component was verified
+    if "component_status" not in state:
+        state["component_status"] = {}
+
+    comp_status = state["component_status"].get(component, {})
+    if comp_status.get("status") != "verified":
+        print(json.dumps({
+            "error": f"Component '{component}' must be verified before it can be completed",
+            "current_status": comp_status.get("status", "not_started"),
+            "hint": "Run spec-extract and mark-verified first. Skipping verification is not allowed."
+        }))
+        return 1
+
+    # Mark as completed
+    state["component_status"][component]["status"] = "completed"
+    state["component_status"][component]["completed_at"] = datetime.now().isoformat()
 
     if component not in state["completed_components"]:
         state["completed_components"].append(component)
@@ -462,8 +561,17 @@ def main():
     curr_parser = subparsers.add_parser("set-current", help="Set current component")
     curr_parser.add_argument("component", help="Component name")
 
+    # mark-implemented
+    impl_parser = subparsers.add_parser("mark-implemented", help="Mark component as implemented (Phase 3 done)")
+    impl_parser.add_argument("component", help="Component name")
+
+    # mark-verified
+    verify_parser = subparsers.add_parser("mark-verified", help="Mark component as verified (Phase 4 done)")
+    verify_parser.add_argument("component", help="Component name")
+    verify_parser.add_argument("--extracted-file", required=True, help="Path to extracted YAML file (must exist)")
+
     # complete-component
-    subparsers.add_parser("complete-component", help="Mark current component as completed")
+    subparsers.add_parser("complete-component", help="Mark current component as completed (requires verified status)")
 
     # add-extra
     extra_parser = subparsers.add_parser("add-extra", help="Add extra item found during verify")
@@ -510,6 +618,8 @@ def main():
         "set-data": cmd_set_data,
         "set-components": cmd_set_components,
         "set-current": cmd_set_current,
+        "mark-implemented": cmd_mark_implemented,
+        "mark-verified": cmd_mark_verified,
         "complete-component": cmd_complete_component,
         "add-extra": cmd_add_extra,
         "get-extras": cmd_get_extras,

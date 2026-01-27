@@ -266,24 +266,33 @@ No user approval needed. Auto-continue after verification passes.
 </checkpoint>
 
 <next>
-1. Mark component complete:
+1. Mark component as verified (validates extracted file exists):
+   ```bash
+   python .opensdd/build-spec.state.py mark-verified [COMPONENT_NAME] --extracted-file ".specs/[COMPONENT_NAME].extracted.yaml"
+   ```
+
+   **If this fails**: The extracted file doesn't exist. You must run spec-extract first.
+
+2. Mark component complete (validates status is "verified"):
    ```bash
    python .opensdd/build-spec.state.py complete-component
    python .opensdd/build-spec.state.py complete-phase 4
    ```
 
-2. Check if all components done:
+   **If this fails**: Component wasn't verified. Return to step 1.
+
+3. Check if all components done:
    ```bash
    python .opensdd/build-spec.state.py status
    ```
 
    Compare `completed_components` length to `all_components` length.
 
-3. **If all done:**
+4. **If all done:**
    - Show: "All components implemented and verified!"
    - Load: `phase-05-review.md`
 
-4. **If more remain:**
+5. **If more remain:**
    - Show: "Component complete. [X] of [Y] done."
    - Load: `phase-02-select.md` (loop back)
 </next>
