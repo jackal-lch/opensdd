@@ -99,7 +99,7 @@ We don't constrain AI with detailed instructions. We constrain it with clear bou
 
 | | |
 |---|---|
-| **Skill** | `/create-blueprint` |
+| **Skill** | `/opensdd:blueprint` |
 | **Input** | User idea, context, requirements |
 | **Output** | `.opensdd/blueprint.md` |
 
@@ -118,7 +118,7 @@ The blueprint is comprehensive but focused on **what** and **why**, not **how**.
 
 | | |
 |---|---|
-| **Skill** | `/create-spec` |
+| **Skill** | `/opensdd:spec` |
 | **Input** | `.opensdd/blueprint.md` + tech decisions |
 | **Output** | `.opensdd/spec.yaml` |
 
@@ -133,6 +133,22 @@ AI generates technical specification:
 - Integration boundaries
 
 The spec defines **contracts and boundaries** that code must satisfy.
+
+### Phase 2.5: Visualize (Optional)
+
+| | |
+|---|---|
+| **Skill** | `/opensdd:visualize` |
+| **Input** | `.opensdd/spec.yaml` |
+| **Output** | `.opensdd/spec-visual.md` |
+
+Generate Mermaid diagrams to understand system design at a glance:
+- Architecture overview (components by layer)
+- Component dependencies (consumes relationships)
+- Event flow (emits → subscribes)
+- Type map (types with component usage)
+
+Useful for reviewing the spec before implementation or sharing with stakeholders.
 
 ### Phase 3: Build Loop (Ralph Loop)
 
@@ -166,6 +182,8 @@ Compare `.opensdd/extracted/*.yaml` (extracted) against `.opensdd/spec.yaml` (de
 - **Drift** — Wrong naming, signature, types. Needs fix.
 - **Missing** — In spec but not in code. Needs implementation.
 - **Extra** — In code but not in spec. Evaluate if needed.
+
+> **Tip:** Use `/opensdd:compare` standalone anytime to check code-spec alignment without running the full build loop.
 
 #### FIX
 AI fixes code to match spec. Loop continues until all components match.
@@ -284,9 +302,11 @@ Both formats are contracts-only, enabling meaningful comparison.
 
 | Skill | Purpose |
 |-------|---------|
-| `/create-blueprint` | Generate product blueprint from user intent |
-| `/create-spec` | Generate technical spec from blueprint |
-| `/build-spec` | Run build loop: implement → extract → compare → fix |
+| `/opensdd:blueprint` | Generate product blueprint from user intent |
+| `/opensdd:spec` | Generate technical spec from blueprint |
+| `/opensdd:visualize` | Generate Mermaid diagrams from spec |
+| `/opensdd:build` | Run build loop: implement → extract → compare → fix |
+| `/opensdd:compare` | Check code-spec alignment (matches, drifts, missing, extras) |
 
 ---
 

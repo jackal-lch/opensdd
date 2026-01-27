@@ -7,212 +7,167 @@ next: null
 # Phase 5: Review
 
 <objective>
-Auto-resolve "Extra" items found during the build. Helpers and infrastructure are auto-kept. Test/debug code is auto-removed. New functionality is flagged for spec update.
+Review extras found during build. Apply criteria and get user confirmation.
 </objective>
 
 <prerequisite>
-Load extras from state:
+All components must have `status: match` in compare-result.yaml.
 
 ```bash
-python .opensdd/build-spec.state.py get-extras
+cat .opensdd/compare-result.yaml | grep -c "status: missing" || echo "0"
 ```
 
-If no extras:
-- Show: "No extra items to review. Build complete!"
-- STOP workflow (success).
+If count > 0:
+- Not all components done. Return to Phase 2.
 </prerequisite>
 
 <input>
-From state:
-- `extras`: List of all extra items found across all components (with classification)
-
 From files:
-- `.opensdd/spec.yaml`: Current spec
+- `.opensdd/compare-result.yaml`: Final comparison with extras
+- `.opensdd/spec.yaml`: Current spec (may be updated)
 </input>
 
 <steps>
 
-<step n="1" name="load_and_categorize">
-Load all extras from state:
+<step n="1" name="load_extras">
+Read extras from compare-result.yaml:
 
 ```bash
-python .opensdd/build-spec.state.py get-extras
+cat .opensdd/compare-result.yaml
 ```
 
-Parse the JSON output. Group by classification:
+**Schema:** See `skills/compare-spec/references/output-schema.yaml` for compare-result.yaml structure.
+
+Extract `extras:` array. Each extra has:
+- `item`: function/type name
+- `kind`: function | type | method
+- `signature`: full signature
+- `file`: source file path
+- `line`: line number
+- `classification`: helper | infrastructure | test | new_functionality
+- `used_by`: list of spec functions that use this
+
+If no extras:
+- Speak: "No extra items found. Build complete!"
+- Skip to final summary (step 5)
+</step>
+
+<step n="2" name="categorize_extras">
+Group extras by classification:
 
 ```
-Extras Summary
-──────────────
+Extras Found: {total count}
+══════════════════════════
 
-Auto-Kept (no action needed):
-  Helpers (used by spec functions): [count]
-  Infrastructure (language requirements): [count]
+Auto-kept (no action needed):
+  Helpers (used by spec functions): {count}
+    - {item}: used by {used_by}
+  Infrastructure (language requirements): {count}
+    - {item}
 
-Auto-Removed:
-  Test/Debug code: [count]
-
-Needs Attention:
-  New functionality: [count]
+Needs decision:
+  Test/debug code: {count}
+    - {item}
+  New functionality: {count}
+    - {item}: {standalone or used by X}
 ```
 </step>
 
-<step n="2" name="auto_resolve_helpers">
-**Auto-keep helpers and infrastructure:**
+<step n="3" name="apply_criteria">
+Apply criteria to determine recommendations:
 
-For each extra where classification == "helper" or "infrastructure":
+| Classification | used_by | Recommendation |
+|----------------|---------|----------------|
+| `helper` | has consumers | **Keep** - needed by spec functions |
+| `infrastructure` | any | **Keep** - language requirements |
+| `test` | any | **Recommend delete** - test/debug code |
+| `new_functionality` | has consumers | **Keep internal** - helper that wasn't detected |
+| `new_functionality` | standalone | **Recommend: add to spec OR delete** |
 
-```bash
-python .opensdd/build-spec.state.py resolve-extra \
-  --item "[ITEM_NAME]" \
-  --decision "keep_internal"
+Build recommendations:
 ```
+Recommendations
+───────────────
 
-These are kept because:
-- Helpers: Used by spec functions, necessary for implementation
-- Infrastructure: Language requirements (traits, interfaces, error types)
+KEEP (auto):
+  - {item}: {reason}
 
-Log:
-```
-Auto-kept [N] helpers and [M] infrastructure items.
-```
-</step>
+DELETE (recommend):
+  - {item}: {reason}
 
-<step n="3" name="auto_remove_test">
-**Auto-remove test/debug code:**
+ADD TO SPEC (recommend):
+  - {item}: Standalone business logic, consider adding to spec
 
-For each extra where classification == "test":
-
-1. Remove the code:
-   ```bash
-   # Delete the function/class from the file
-   # Or remove the entire file if it's only test code
-   ```
-
-2. Mark as resolved:
-   ```bash
-   python .opensdd/build-spec.state.py resolve-extra \
-     --item "[ITEM_NAME]" \
-     --decision "remove"
-   ```
-
-Log:
-```
-Auto-removed [N] test/debug items.
+KEEP INTERNAL (recommend):
+  - {item}: Used by spec functions, keep as internal helper
 ```
 </step>
 
-<step n="4" name="flag_new_functionality">
-**Flag new functionality for spec update:**
+<step n="4" name="get_user_confirmation">
+**CHECKPOINT: User decision required**
 
-For each extra where classification == "new_functionality":
+Present recommendations and ask for confirmation:
 
-1. Show the item:
-   ```
-   New Functionality Found:
+Use AskUserQuestionTool:
+- question: "Review complete. {N} extras analyzed. Confirm recommendations?"
+- options:
+  - label: "Confirm recommendations"
+    description: "Apply: keep {X}, delete {Y}, add {Z} to spec"
+  - label: "Review individually"
+    description: "Walk through each extra with me"
+  - label: "Keep all"
+    description: "Don't delete anything, flag for future review"
 
-   [item_name]
-   ├─ Component: [component]
-   ├─ Signature: [signature]
-   ├─ File: [file:line]
-   └─ Used by: [list or "standalone"]
-   ```
+**On "Confirm recommendations":**
+- Delete items marked for deletion
+- Add spec entries for items to add to spec
+- Continue to step 5
 
-2. Determine if it should be added to spec:
-   - Is it used by multiple spec functions? → Likely should be in spec
-   - Is it a standalone feature? → Definitely should be in spec
-   - Is it a workaround or hack? → Maybe remove
+**On "Review individually":**
+- For each extra needing decision:
+  - Present details
+  - Ask user: Keep / Delete / Add to spec
+- After all reviewed, continue to step 5
 
-3. **Auto-decision rule:**
-   - If used by spec functions → keep_internal (it's a helper that wasn't detected)
-   - If standalone (not used by any spec function) → add_to_spec
-
-4. For items that should be added to spec, generate the spec entry:
-   ```yaml
-   # Addition to spec.yaml for [component]:
-   provides:
-     [item_name]:
-       for: "[AI-generated description based on implementation]"
-       params: { [from signature] }
-       returns: [from signature]
-   ```
-
-5. Add to spec.yaml and mark resolved:
-   ```bash
-   python .opensdd/build-spec.state.py resolve-extra \
-     --item "[ITEM_NAME]" \
-     --decision "add_to_spec"
-   ```
-
-Log:
-```
-New functionality:
-- Added to spec: [list]
-- Kept internal: [list]
-```
+**On "Keep all":**
+- Skip deletions
+- Log: "All extras kept. Review later if needed."
+- Continue to step 5
 </step>
 
-<step n="5" name="final_verification">
-**Run final full-codebase verification:**
-
-```bash
-# Extract all components
-for component in [ALL_COMPONENTS]; do
-  spec-extract [COMPONENT_PATH] -o ".specs/${component}.extracted.yaml"
-done
-```
-
-Run verify-compare on each component to ensure no new drifts introduced during review.
-
-If any drifts found:
-- Show: "Review introduced drifts. Fixing..."
-- Fix the drifts
-- Re-verify
-
-Report final status:
-```
-Final Verification
-──────────────────
-All [N] components verified.
-Zero drifts.
-Spec and code are fully aligned.
-```
-</step>
-
-<step n="6" name="summary">
-**Generate final build summary:**
+<step n="5" name="final_summary">
+Generate final build summary:
 
 ```
-Build Spec Complete!
-════════════════════
+Build Complete!
+═══════════════
 
-Components Implemented: [N]/[N] ✓
-  [list each component with ✓]
+Components: {N}/{N} implemented and verified
 
-Scaffold Created:
-  ✓ Project config
-  ✓ Directory structure
-  ✓ Entry points
-  ✓ Shared types
-  ✓ Deployment files (if applicable)
+Files created:
+  {Layer}: {count} files
+    - {file}: {component}
+  ...
 
-Extras Resolved: [M]
-  ✓ Helpers (auto-kept): [count]
-  ✓ Infrastructure (auto-kept): [count]
-  ✓ Test/debug (auto-removed): [count]
-  ✓ New functionality (added to spec): [count]
+Types:
+  - Enums: {count}
+  - Domain types: {count}
 
-Final Status: Spec and code are fully aligned.
+Extras resolved:
+  - Kept: {count}
+  - Deleted: {count}
+  - Added to spec: {count}
 
-Files Created:
-  [list key files organized by layer/purpose]
+Spec-Code Alignment: 100%
+
+To re-run after spec changes: /opensdd:build
 ```
 </step>
 
 </steps>
 
 <output>
-All extras resolved. Spec and code fully aligned. Build complete.
+Build complete. All components implemented, verified, and extras resolved.
 </output>
 
 <verify>
@@ -220,31 +175,28 @@ AI self-verification:
 
 | Step | Expected Output | Status |
 |------|-----------------|--------|
-| load_and_categorize | Extras grouped by classification | |
-| auto_resolve_helpers | Helpers/infrastructure marked kept | |
-| auto_remove_test | Test code removed | |
-| flag_new_functionality | New functionality handled | |
-| final_verification | Full codebase verifies clean | |
-| summary | Final summary generated | |
+| load_extras | Extras loaded from compare-result | |
+| categorize_extras | Extras grouped by classification | |
+| apply_criteria | Recommendations generated | |
+| get_user_confirmation | User decision received | |
+| final_summary | Summary displayed | |
 
-If any step incomplete → complete it.
-If all done → proceed to completion.
+All steps must complete before workflow ends.
 </verify>
 
-<checkpoint required="false">
-No user approval needed. Auto-complete.
+<checkpoint required="true">
+**User approval required for extras handling.**
+
+See step 4 for checkpoint implementation.
 </checkpoint>
 
 <next>
-1. Complete phase:
-   ```bash
-   python .opensdd/build-spec.state.py complete-phase 5
-   ```
+After user confirmation and summary:
 
-2. Speak:
+1. Speak:
    "Build complete! Your code is fully aligned with spec.yaml.
 
-   To run again (e.g., after spec changes): /build-spec"
+   To run again after spec changes: /opensdd:build"
 
-3. No next phase. Workflow complete.
+2. No next phase. Workflow complete.
 </next>

@@ -70,14 +70,16 @@ The spec is the source of truth. Always.
 ## How It Works
 
 ```
-/opensdd:blueprint  →  /opensdd:spec  →  /opensdd:build
+/opensdd:blueprint  →  /opensdd:spec  →  /opensdd:visualize  →  /opensdd:build
 ```
 
 | Command | What It Does |
 |---------|--------------|
 | `/opensdd:blueprint` | Define your product (vision, users, features, flows) |
 | `/opensdd:spec` | Generate technical contracts (components, types, interfaces) |
+| `/opensdd:visualize` | Generate Mermaid diagrams to understand system design |
 | `/opensdd:build` | Implement and verify code matches spec |
+| `/opensdd:compare` | Check code-spec alignment anytime (standalone) |
 
 The build loop runs continuously:
 
@@ -104,7 +106,9 @@ The build loop runs continuously:
 |---------|---------|
 | `/opensdd:blueprint` | 8-phase guided product definition |
 | `/opensdd:spec` | 4-phase technical specification |
+| `/opensdd:visualize` | Generate Mermaid diagrams from spec |
 | `/opensdd:build` | Implement, verify, and fix loop |
+| `/opensdd:compare` | Check code-spec alignment (matches, drifts, missing, extras) |
 | `/opensdd:cov` | Chain of verification for response validation |
 
 ---
@@ -137,7 +141,7 @@ To verify installation:
 /opensdd:
 ```
 
-You should see `blueprint`, `spec`, `build`, and `cov` in the autocomplete.
+You should see `blueprint`, `spec`, `visualize`, `build`, and `cov` in the autocomplete.
 
 ### Step 2: Install spec-extract
 
@@ -190,11 +194,13 @@ Phase 4: Review → 1 helper (auto-kept)
 ```
 your-project/
 ├── .opensdd/
-│   ├── blueprint.md    # Product definition
-│   ├── spec.yaml       # Technical contracts (source of truth)
-│   └── extracted/      # Code signatures
+│   ├── blueprint.md       # Product definition
+│   ├── spec.yaml          # Technical contracts (source of truth)
+│   ├── spec-visual.md     # Mermaid diagrams (via /visualize)
+│   ├── compare-result.yaml # Code-spec alignment report (via /compare)
+│   └── extracted/         # Code signatures
 └── src/
-    └── ...             # Your code, verified against spec
+    └── ...                # Your code, verified against spec
 ```
 
 ---

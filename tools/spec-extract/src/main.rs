@@ -19,7 +19,7 @@ struct Cli {
     path: PathBuf,
 
     /// Output directory for spec files
-    #[arg(short, long, default_value = ".specs")]
+    #[arg(short, long, default_value = ".opensdd/extracted")]
     output: PathBuf,
 
     /// Output format (yaml or json)

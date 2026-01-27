@@ -7,96 +7,101 @@ next: phase-03-implement.md
 # Phase 2: Select
 
 <objective>
-Choose the next component to implement based on dependencies and progress.
+Pick the next component to implement based on compare-result.yaml and dependencies.
 </objective>
 
 <prerequisite>
-Verify Phase 1 complete:
+`.opensdd/compare-result.yaml` must exist (created by Phase 1 scaffold or previous Phase 4 verify).
 
 ```bash
-python .opensdd/build-spec.state.py check-phase 1
+test -f ".opensdd/compare-result.yaml" && echo "FOUND" || echo "NOT_FOUND"
 ```
 
-If exit code != 0:
-- Show: "Phase 1 (Scaffold) must be complete first."
-- STOP workflow.
+If NOT_FOUND:
+- Something went wrong. Return to Phase 1.
 </prerequisite>
 
 <input>
-From state:
-- `all_components`: List of all components from spec.yaml
-- `completed_components`: List of already implemented components
+From files:
+- `.opensdd/compare-result.yaml`: Current state of spec vs code
+- `.opensdd/spec.yaml`: Component dependencies
 </input>
 
 <steps>
 
-<step n="1" name="load_progress">
-Load current progress from state:
+<step n="1" name="read_compare_result">
+Load current state from compare-result.yaml:
 
 ```bash
-python .opensdd/build-spec.state.py status
+cat .opensdd/compare-result.yaml
 ```
 
-From the JSON output, extract:
-- `all_components`: Full list of components
-- `completed_components`: Already done
-- Calculate: `remaining = all_components - completed_components`
+**Schema:** See `skills/compare-spec/references/output-schema.yaml` for compare-result.yaml structure.
 
-If remaining is empty:
-- All components implemented
-- Skip to <next> with "all done" path
+Extract:
+- `summary.matches`: How many done
+- `summary.missing`: How many need implementation
+- `components`: Map of component name → status
 </step>
 
-<step n="2" name="analyze_dependencies">
-Read spec.yaml and analyze dependencies for remaining components:
+<step n="2" name="find_missing">
+Identify components with `status: missing`:
 
-```bash
-cat .opensdd/spec.yaml
+```
+Missing components:
+  - {component_name}
+  - {component_name}
+  ...
 ```
 
-For each remaining component, check its `consumes` field:
-- List which other components it depends on
-- Check if those dependencies are in `completed_components`
-- Mark as "ready" if all dependencies complete (or no dependencies)
-- Mark as "blocked" if dependencies not yet implemented
-
-**Dependency analysis table:**
-
-| Component | Depends On | Status |
-|-----------|------------|--------|
-| [name] | [list or "none"] | ready/blocked |
+If no missing components:
+- All components implemented!
+- Skip to Phase 5 (Review)
 </step>
 
-<step n="3" name="auto_select">
-**Auto-select next component using this priority:**
+<step n="3" name="analyze_dependencies">
+For each missing component, check dependencies from spec.yaml:
 
-1. **No dependencies** - Components with empty `consumes` field
-2. **Dependencies complete** - Components whose `consumes` are all in `completed_components`
-3. **Layer order** - Among equals, prefer: domain → application → infrastructure
+Read spec.yaml and for each missing component:
+- Get `consumes:` field (list of components it depends on)
+- Check if each dependency has `status: match` in compare-result.yaml
+- Mark component as "ready" if all deps are done (or has no deps)
+- Mark component as "blocked" if any dep is missing/drift
 
-**Selection logic:**
-- Filter to "ready" components only
-- Sort by layer (domain first, then application, then infrastructure)
-- Select the first one
+Build ready list:
 
-If no "ready" components:
-- Identify circular dependency issue
-- Report to user
+| Component | Dependencies | Status |
+|-----------|--------------|--------|
+| {name} | {consumes or "none"} | ready/blocked |
+</step>
+
+<step n="4" name="select_next">
+Select next component using priority:
+
+1. **Ready components only** (all dependencies satisfied)
+2. **Layer order**: domain → application → infrastructure
+3. **First in layer** if multiple ready
+
+If no ready components:
+- Circular dependency detected
+- Report issue to user
 - STOP workflow
+
+Store selected component name for Phase 3.
 </step>
 
-<step n="4" name="report_selection">
-Report the selected component:
+<step n="5" name="report_selection">
+Display selection:
 
 ```
 Component Selection
 ───────────────────
-Progress: [completed] of [total] components done
+Progress: {matches} of {total} components done
 
-Selected: [COMPONENT_NAME]
-Layer: [layer from spec]
-Depends on: [consumes list or "none"]
-Provides: [count] functions
+Selected: {COMPONENT_NAME}
+Layer: {layer from spec}
+Depends on: {consumes list or "none"}
+Provides: {count of provides functions}
 
 Proceeding to implement...
 ```
@@ -105,7 +110,7 @@ Proceeding to implement...
 </steps>
 
 <output>
-Selected component name stored in state as `current_component`.
+Selected component name (stored in conversation context for Phase 3).
 </output>
 
 <verify>
@@ -113,13 +118,13 @@ AI self-verification:
 
 | Step | Expected Output | Status |
 |------|-----------------|--------|
-| load_progress | Progress loaded, remaining calculated | |
-| analyze_dependencies | Dependencies analyzed for all remaining | |
-| auto_select | Component auto-selected | |
+| read_compare_result | State loaded | |
+| find_missing | Missing list identified | |
+| analyze_dependencies | Dependencies analyzed | |
+| select_next | Component selected | |
 | report_selection | Selection reported | |
 
 If any step not done → return and complete it.
-If all done → proceed to next.
 </verify>
 
 <checkpoint required="false">
@@ -127,18 +132,11 @@ No user approval needed. Auto-continue after selection.
 </checkpoint>
 
 <next>
-**If no components remaining:**
-
-1. Speak: "All [N] components implemented. Proceeding to review..."
-2. Skip directly to: `phase-05-review.md`
+**If no missing components:**
+1. Speak: "All {N} components implemented! Proceeding to review..."
+2. Load: `phase-05-review.md`
 
 **If component selected:**
-
-1. Store in state:
-   ```bash
-   python .opensdd/build-spec.state.py set-current "[COMPONENT_NAME]"
-   python .opensdd/build-spec.state.py start-phase 2
-   ```
-
+1. Store `current_component = {COMPONENT_NAME}` in context
 2. Load: `phase-03-implement.md` (same folder)
 </next>
