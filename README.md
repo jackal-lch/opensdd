@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.png" alt="OpenSDD - Spec-Driven Development that actually works" width="800">
+  <img src="docs/assets/banner-v2.png" alt="OpenSDD - Spec-Driven Development that actually works" width="800">
 </p>
 
 <p align="center">
