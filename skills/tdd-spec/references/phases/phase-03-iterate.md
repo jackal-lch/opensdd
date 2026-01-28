@@ -111,6 +111,29 @@ Ready to implement...
 
 Implement code that **achieves the `for:` description** and passes all tests.
 
+**ABSOLUTE RULE: NEVER ADD PLACEHOLDERS TO PASS TESTS**
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║  IF the only way to pass a test is to add a placeholder/fake:     ║
+║                                                                   ║
+║    1. STOP - Do not add the placeholder                           ║
+║    2. The TEST is too weak, not the implementation                ║
+║    3. Go back and STRENGTHEN the test first                       ║
+║    4. Then implement REAL logic to pass the stronger test         ║
+║                                                                   ║
+║  NEVER fake it to make it green. Fix the test instead.            ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+**Forbidden shortcuts:**
+- `return "fake_value"` - Use real computation
+- `return Mock()` - Use real dependencies
+- `_data = {}` - Use real database/repository
+- `pass` - Implement real logic
+- `raise NotImplementedError` - Implement it now
+- Hardcoded values that happen to match test expectations
+
 **CRITICAL: "Minimal" means NO OVER-ENGINEERING, not PLACEHOLDERS/FAKES**
 
 ```
@@ -361,6 +384,15 @@ AI self-verification for current function:
 - Tests failed BEFORE implementation? (true RED)
 - Tests pass AFTER implementation? (true GREEN)
 - Tests still pass after refactor? (safe REFACTOR)
+
+**CRITICAL - No placeholders check:**
+- [ ] No `return "fake..."` or hardcoded strings
+- [ ] No `_data = {}` in-memory storage
+- [ ] No `pass` or `raise NotImplementedError`
+- [ ] No `Mock()` or fake dependencies
+- [ ] Implementation achieves `for:` description with REAL logic
+
+If any placeholder was added → DELETE IT, strengthen the test, re-implement.
 </verify>
 
 <checkpoint required="false">
