@@ -23,6 +23,7 @@ From previous phases:
 - `function_order`: Ordered list of functions with test cases
 - `TEST_FILE_PATH`: Path to test file
 - `COMPONENT_FILE_PATH`: Path to component file
+- `TYPES_FILE_PATH`: Path to types file (update as needed during implementation)
 - `TEST_COMMAND`: Command to run tests
 
 Iteration state:
@@ -108,45 +109,107 @@ Ready to implement...
 <step n="4" name="green_implement">
 **GREEN PHASE: Implement the function**
 
-Read the test expectations and implement MINIMAL code to pass.
+Implement code that **achieves the `for:` description** and passes all tests.
 
-**TDD Discipline:**
-1. Look at failing test assertions
-2. Write ONLY enough code to make them pass
-3. Don't anticipate future tests
-4. Don't over-engineer
+**CRITICAL: "Minimal" means NO OVER-ENGINEERING, not PLACEHOLDERS**
+
+```
+WRONG interpretation of "minimal":
+  - Hardcoded return values
+  - Stub implementations that just return the right type
+  - Empty type definitions with `pass`
+
+CORRECT interpretation of "minimal":
+  - Real logic that achieves the `for:` purpose
+  - No premature abstractions
+  - No features beyond what's tested
+  - No speculative error handling
+```
+
+**Implementation Requirements:**
+
+1. **Function MUST achieve its `for:` description**
+   - If `for:` says "Authenticate credentials" → actually verify credentials
+   - If `for:` says "Create user" → actually persist to storage
+   - If `for:` says "Generate token" → actually generate a valid token
+
+2. **Type fields MUST be defined when used**
+   - When implementing a function that returns `TokenPair`:
+     - Define `TokenPair` fields: `access_token`, `refresh_token`, `expires_in`
+   - When implementing a function that takes `CreateUserInput`:
+     - Define `CreateUserInput` fields: `email`, `name`, `password`
+   - Update type definitions in the types file as you implement
+
+3. **Storage operations MUST persist data**
+   - Don't just return objects - store them
+   - Use the repository/storage layer defined in spec
+   - Verify data can be retrieved after creation
 
 **Implementation checklist:**
+- [ ] Function achieves its `for:` description (not just returns right type)
 - [ ] Follow exact signature from spec
-- [ ] Handle happy path (make success tests pass)
-- [ ] Handle error cases (make error tests pass)
-- [ ] Handle edge cases (make edge tests pass)
-- [ ] Use types from spec
+- [ ] Define type fields when implementing functions that use them
+- [ ] Persist data for create/update operations
+- [ ] Validate input for validation functions
+- [ ] Generate real values (tokens, IDs) not hardcoded strings
+- [ ] Handle error cases with appropriate error types
 - [ ] Follow conventions from spec
 
-**Example progression:**
+**Example - CORRECT implementation:**
 
-```typescript
-// First test: "authenticates valid credentials"
-// Minimal implementation:
-login(credentials: Credentials): AuthResult | AuthError {
-  // Just enough to pass first test
-  return new AuthResult({ token: 'xxx', userId: '123' })
-}
+```python
+# for: "Authenticate user credentials and create session"
+def login(self, credentials: Credentials) -> TokenPair | AuthError:
+    # 1. Actually validate credentials against storage
+    user = self.user_repo.find_by_email(credentials.email)
+    if not user:
+        return AuthError(code="USER_NOT_FOUND")
 
-// Second test: "returns AuthError for invalid password"
-// Add password check:
-login(credentials: Credentials): AuthResult | AuthError {
-  if (credentials.password !== 'validPassword123') {
-    return new AuthError('INVALID_PASSWORD')
-  }
-  return new AuthResult({ token: 'xxx', userId: '123' })
-}
+    if not verify_password(credentials.password, user.password_hash):
+        return AuthError(code="INVALID_PASSWORD")
 
-// Continue until all tests pass...
+    # 2. Actually create a session
+    session = Session(
+        user_id=user.id,
+        created_at=datetime.now(),
+        expires_at=datetime.now() + timedelta(hours=24)
+    )
+    self.session_repo.save(session)
+
+    # 3. Actually generate tokens
+    access_token = generate_jwt(user_id=user.id, expires_in=3600)
+    refresh_token = generate_refresh_token()
+
+    # 4. Return fully populated type
+    return TokenPair(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=3600,
+        token_type="Bearer"
+    )
+```
+
+**Update types as you implement:**
+
+When you need a field on a type that's not defined, add it:
+
+```python
+# Before (scaffold stub):
+@dataclass
+class TokenPair:
+    pass
+
+# After (during implementation):
+@dataclass
+class TokenPair:
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    token_type: str
 ```
 
 Edit COMPONENT_FILE_PATH to implement the function.
+Edit types file to define type fields as needed.
 </step>
 
 <step n="5" name="green_verify_pass">

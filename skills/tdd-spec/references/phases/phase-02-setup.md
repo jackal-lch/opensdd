@@ -52,9 +52,18 @@ Determine file paths based on language and structure.
 | go | `{layer}/{component}.go` | `domain/auth_service.go` |
 | rust | `{layer}/{component}.rs` | `src/domain/auth_service.rs` |
 
+**Types file path (for the component's layer):**
+| Language | Pattern | Example |
+|----------|---------|---------|
+| typescript | `{layer}/types.ts` | `src/domain/types.ts` |
+| python | `{layer}/types.py` | `src/domain/types.py` |
+| go | `{layer}/types.go` | `domain/types.go` |
+| rust | `{layer}/types.rs` | `src/domain/types.rs` |
+
 Store:
 - `TEST_FILE_PATH`
 - `COMPONENT_FILE_PATH`
+- `TYPES_FILE_PATH`
 </step>
 
 <step n="2" name="create_test_file">

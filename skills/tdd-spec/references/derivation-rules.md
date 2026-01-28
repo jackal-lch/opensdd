@@ -2,6 +2,28 @@
 
 Rules for transforming spec.yaml definitions into test cases.
 
+## Core Principle: Behavioral Tests
+
+**Tests MUST verify actual behavior, not just return types.**
+
+```python
+# BAD - Passes with placeholder stub
+def test_login():
+    result = auth.login(credentials)
+    assert isinstance(result, TokenPair)  # Placeholder returns TokenPair too!
+
+# GOOD - Forces real implementation
+def test_login_authenticates_valid_credentials():
+    result = auth.login(valid_credentials)
+    assert result.access_token is not None
+    assert len(result.access_token) > 20  # Real JWT
+    decoded = decode_jwt(result.access_token)
+    assert decoded["user_id"] == expected_user.id
+    assert decoded["exp"] > time.time()  # Not expired
+```
+
+**Key insight:** If a test can pass with a hardcoded stub, the test is too weak.
+
 ## Overview
 
 Tests are derived from three sources in spec.yaml:
@@ -202,6 +224,74 @@ Force integration test when:
 - Function makes HTTP calls
 - Function uses file system
 
+## Rule 7: Behavioral Assertions (CRITICAL)
+
+Tests MUST include assertions that **force real implementation**. Type checks alone are insufficient.
+
+### Assertion Patterns by Action
+
+| Action in `for:` | Required Assertions |
+|------------------|---------------------|
+| "Create X" | X exists in storage after call, X has correct fields, X.id is valid |
+| "Update X" | X.field changed to new value, X.updated_at changed |
+| "Delete X" | X no longer in storage, related data cleaned up |
+| "Authenticate" | Token is valid JWT, token contains user_id, token not expired |
+| "Validate X" | Invalid input rejected with specific error, valid input accepted |
+| "Find/Get X" | Returned X matches stored X, all fields populated |
+| "Transform X to Y" | Y has expected structure, Y values derived correctly from X |
+
+### Storage Verification
+
+For any function that modifies state:
+
+```python
+# GOOD - Verifies actual storage
+def test_create_user():
+    result = users.create(input)
+
+    # Verify returned object
+    assert result.id is not None
+    assert result.email == input.email
+
+    # Verify actually persisted
+    stored = users.get_by_id(result.id)
+    assert stored is not None
+    assert stored.email == input.email
+```
+
+### Field Verification
+
+Tests must verify type fields are populated correctly:
+
+```python
+# GOOD - Forces type fields to be implemented
+def test_login_returns_complete_token_pair():
+    result = auth.login(credentials)
+
+    # TokenPair must have these fields (forces type definition)
+    assert result.access_token is not None
+    assert result.refresh_token is not None
+    assert result.expires_in > 0
+    assert result.token_type == "Bearer"
+```
+
+### Relationship Verification
+
+For functions involving relationships:
+
+```python
+# GOOD - Verifies relationships work
+def test_create_session_links_to_user():
+    session = auth.create_session(user_id)
+
+    # Session linked to user
+    assert session.user_id == user_id
+
+    # Can retrieve user's sessions
+    user_sessions = sessions.get_by_user(user_id)
+    assert session.id in [s.id for s in user_sessions]
+```
+
 ## Derivation Checklist
 
 For each function in `provides:`:
@@ -210,6 +300,9 @@ For each function in `provides:`:
 - [ ] 1 error test per error type in `output:`
 - [ ] Edge case tests for required inputs
 - [ ] Null/empty handling test
+- [ ] **Behavioral assertions that force real implementation**
+- [ ] **Storage verification for state-changing functions**
+- [ ] **Field verification for returned types**
 
 For each event in `emits:`:
 

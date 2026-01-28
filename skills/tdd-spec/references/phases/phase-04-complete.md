@@ -23,6 +23,7 @@ From previous phases:
 - `functions_completed`: List of completed functions
 - `TEST_FILE_PATH`: Path to test file
 - `COMPONENT_FILE_PATH`: Path to component file
+- `TYPES_FILE_PATH`: Path to types file (for the layer)
 - `TEST_COMMAND`: Command to run tests
 - `COMPILE_CHECK_COMMAND`: Command to verify syntax
 </input>
@@ -100,7 +101,143 @@ TDD should produce high coverage - review implementation
 ```
 </step>
 
-<step n="4" name="display_summary">
+<step n="4" name="verify_no_placeholders">
+**Verify no placeholder implementations remain.**
+
+Search for placeholder patterns in component and types files:
+
+```bash
+# Search for common placeholder patterns
+grep -n "pass$\|TODO\|FIXME\|NotImplemented\|placeholder\|raise.*Not.*implemented" {COMPONENT_FILE_PATH}
+grep -n "pass$" {TYPES_FILE_PATH}
+```
+
+**Placeholder patterns to detect:**
+
+| Pattern | Issue |
+|---------|-------|
+| `pass` (alone on line) | Empty function/class body |
+| `raise NotImplementedError` | Stub implementation |
+| `TODO` / `FIXME` | Incomplete code |
+| `"placeholder"` / `"xxx"` | Hardcoded fake values |
+| Empty dataclass (only `pass`) | Type without fields |
+
+**If placeholders found:**
+
+1. Identify which function/type has placeholder
+2. Return to Phase 3 to implement properly
+3. Tests may be too weak - strengthen assertions
+
+Display:
+```
+Placeholder Check: {TARGET_COMPONENT}
+─────────────────────────────────────
+
+{If none found:}
+No placeholders detected ✓
+
+{If found:}
+WARNING: Placeholders detected!
+
+  {file}:{line} - {pattern found}
+
+These indicate incomplete implementation.
+Review tests - they may be too weak.
+```
+</step>
+
+<step n="5" name="run_integration_tests">
+**Run integration tests to verify components work together.**
+
+Integration tests verify:
+- Component integrates with its dependencies
+- Data flows correctly between components
+- Storage operations persist and retrieve correctly
+
+**Create integration test if not exists:**
+
+```python
+# tests/integration/test_{component}_integration.py
+
+def test_{component}_end_to_end():
+    """Verify component works with real dependencies."""
+    # Setup - use real (or realistic) dependencies
+    repo = InMemoryRepository()  # Or test database
+    component = {Component}(repo=repo)
+
+    # Execute full workflow
+    result = component.{main_function}(valid_input)
+
+    # Verify end-to-end
+    assert result is not None
+    # Verify side effects
+    stored = repo.get(result.id)
+    assert stored == result
+```
+
+**Run integration tests:**
+
+```bash
+# By framework
+{TEST_COMMAND} tests/integration/
+```
+
+**Expected:** All integration tests pass
+
+Display:
+```
+Integration Tests: {TARGET_COMPONENT}
+─────────────────────────────────────
+
+Tests run:   {count}
+Passed:      {count} ✓
+Failed:      0
+
+Component integrates correctly with dependencies.
+```
+
+**If integration tests fail:**
+- Component may work in isolation but fail with real dependencies
+- Check dependency interfaces match
+- Verify storage operations work correctly
+</step>
+
+<step n="6" name="verify_types_complete">
+**Verify all type definitions have fields (not empty).**
+
+Read types file and check each type used by this component:
+
+```bash
+cat {TYPES_FILE_PATH}
+```
+
+**For each type returned or accepted by component functions:**
+
+- [ ] Type has fields defined (not just `pass`)
+- [ ] Fields have correct types
+- [ ] Required fields match spec.yaml type definitions
+
+**If empty types found:**
+
+```python
+# WRONG - Empty type
+@dataclass
+class TokenPair:
+    pass
+
+# CORRECT - Fields defined
+@dataclass
+class TokenPair:
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    token_type: str
+```
+
+Fix any empty types before proceeding.
+</step>
+
+<step n="7" name="display_summary">
 Display final TDD summary.
 
 ```
@@ -148,6 +285,9 @@ AI self-verification:
 | run_all_tests | All tests pass | |
 | verify_syntax | No syntax errors | |
 | check_coverage | Coverage >= 80% | |
+| verify_no_placeholders | No placeholders found | |
+| run_integration_tests | Integration tests pass | |
+| verify_types_complete | All types have fields | |
 | display_summary | Summary displayed | |
 
 **Final checks:**
@@ -155,6 +295,9 @@ AI self-verification:
 - [ ] All tests pass (none skipped)
 - [ ] Code compiles without errors
 - [ ] Coverage meets threshold
+- [ ] No placeholder implementations remain
+- [ ] Integration tests pass
+- [ ] All types have fields defined (not empty)
 </verify>
 
 <checkpoint required="false">
