@@ -102,7 +102,7 @@ TDD should produce high coverage - review implementation
 </step>
 
 <step n="4" name="verify_no_placeholders">
-**Verify no placeholder implementations remain.**
+**Verify no placeholder or fake implementations remain.**
 
 Search for placeholder patterns in component and types files:
 
@@ -110,6 +110,12 @@ Search for placeholder patterns in component and types files:
 # Search for common placeholder patterns
 grep -n "pass$\|TODO\|FIXME\|NotImplemented\|placeholder\|raise.*Not.*implemented" {COMPONENT_FILE_PATH}
 grep -n "pass$" {TYPES_FILE_PATH}
+
+# Search for FAKE/STUB patterns - these indicate shortcuts!
+grep -in "fake\|stub\|mock\|dummy\|hardcoded\|xxx\|test_\|_test" {COMPONENT_FILE_PATH}
+
+# Search for hardcoded return values that should be real
+grep -n "return.*\".*\"\|return.*'.*'" {COMPONENT_FILE_PATH}
 ```
 
 **Placeholder patterns to detect:**
@@ -120,13 +126,32 @@ grep -n "pass$" {TYPES_FILE_PATH}
 | `raise NotImplementedError` | Stub implementation |
 | `TODO` / `FIXME` | Incomplete code |
 | `"placeholder"` / `"xxx"` | Hardcoded fake values |
+| `"fake"` / `"stub"` / `"dummy"` | Fake implementations |
+| `return "..."` with literal strings | Hardcoded values instead of real logic |
+| `_configs = {}` / `_users = {}` | In-memory storage instead of database |
+| `def func(): pass` | No-op function |
 | Empty dataclass (only `pass`) | Type without fields |
+
+**CRITICAL: In-memory storage is a placeholder!**
+
+If you see patterns like:
+```python
+_configs: dict[str, Config] = {}  # THIS IS A PLACEHOLDER!
+_users: dict[str, User] = {}      # THIS IS A PLACEHOLDER!
+_logs: list[Log] = []             # THIS IS A PLACEHOLDER!
+```
+
+This means the component is NOT using the database/repository layer defined in spec.
+The component MUST use proper persistence via repository pattern.
 
 **If placeholders found:**
 
 1. Identify which function/type has placeholder
 2. Return to Phase 3 to implement properly
-3. Tests may be too weak - strengthen assertions
+3. Tests may be too weak - strengthen assertions to verify:
+   - Data is actually persisted (not just stored in memory)
+   - External services are actually called (not hardcoded responses)
+   - Values are actually computed (not returned as literals)
 
 Display:
 ```
@@ -137,12 +162,17 @@ Placeholder Check: {TARGET_COMPONENT}
 No placeholders detected ✓
 
 {If found:}
-WARNING: Placeholders detected!
+WARNING: Placeholders/Fakes detected!
 
   {file}:{line} - {pattern found}
 
-These indicate incomplete implementation.
-Review tests - they may be too weak.
+These indicate incomplete implementation:
+- Fake/stub/dummy keywords found
+- Hardcoded return values
+- In-memory storage instead of database
+- No-op functions
+
+Tests need stronger assertions to force real implementation.
 ```
 </step>
 

@@ -111,19 +111,59 @@ Ready to implement...
 
 Implement code that **achieves the `for:` description** and passes all tests.
 
-**CRITICAL: "Minimal" means NO OVER-ENGINEERING, not PLACEHOLDERS**
+**CRITICAL: "Minimal" means NO OVER-ENGINEERING, not PLACEHOLDERS/FAKES**
 
 ```
 WRONG interpretation of "minimal":
-  - Hardcoded return values
+  - Hardcoded return values ("fake_token", "test_user")
   - Stub implementations that just return the right type
   - Empty type definitions with `pass`
+  - In-memory dicts instead of database (_users = {}, _configs = {})
+  - No-op functions (def record(): pass)
+  - Fake SDK calls that return hardcoded responses
 
 CORRECT interpretation of "minimal":
   - Real logic that achieves the `for:` purpose
+  - Actually call external services (SDK, API, database)
+  - Actually persist data (via repository, not in-memory dict)
+  - Actually compute values (not hardcoded strings)
   - No premature abstractions
   - No features beyond what's tested
-  - No speculative error handling
+```
+
+**ANTI-PATTERNS TO AVOID:**
+
+```python
+# WRONG - Fake SDK call
+def invoke(self, input: AgentInput) -> AgentResult:
+    return AgentResult(response="fake response")  # FAKE!
+
+# CORRECT - Real SDK call
+def invoke(self, input: AgentInput) -> AgentResult:
+    response = self.sdk_client.chat(input.prompt)
+    return AgentResult(response=response.content)
+
+# WRONG - In-memory storage
+_users: dict[str, User] = {}
+def create_user(self, data: CreateUserInput) -> User:
+    user = User(id=uuid4(), **data)
+    _users[user.id] = user  # NOT PERSISTED!
+    return user
+
+# CORRECT - Database persistence
+def create_user(self, data: CreateUserInput) -> User:
+    user = User(id=uuid4(), **data)
+    self.db.add(user)
+    self.db.commit()  # ACTUALLY PERSISTED
+    return user
+
+# WRONG - No-op function
+def record_metric(self, name: str, value: float) -> None:
+    pass  # DOES NOTHING!
+
+# CORRECT - Real metrics
+def record_metric(self, name: str, value: float) -> None:
+    self.prometheus_counter.labels(name=name).inc(value)
 ```
 
 **Implementation Requirements:**

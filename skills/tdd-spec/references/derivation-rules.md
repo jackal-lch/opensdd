@@ -245,18 +245,75 @@ Tests MUST include assertions that **force real implementation**. Type checks al
 For any function that modifies state:
 
 ```python
-# GOOD - Verifies actual storage
+# GOOD - Verifies actual storage (not in-memory dict!)
 def test_create_user():
-    result = users.create(input)
+    # Use real database session, not mock
+    db = get_test_database()
+    service = UserService(db=db)
+
+    result = service.create(input)
 
     # Verify returned object
     assert result.id is not None
     assert result.email == input.email
 
-    # Verify actually persisted
-    stored = users.get_by_id(result.id)
+    # Verify actually persisted to DATABASE (not in-memory)
+    stored = db.query(User).filter_by(id=result.id).first()
     assert stored is not None
     assert stored.email == input.email
+
+    # Verify survives new session (proves real persistence)
+    db.close()
+    new_db = get_test_database()
+    reloaded = new_db.query(User).filter_by(id=result.id).first()
+    assert reloaded is not None  # Would fail if in-memory dict!
+```
+
+### External Service Verification
+
+For functions that call external services (SDK, API):
+
+```python
+# GOOD - Verifies actual external call
+def test_invoke_agent():
+    # Use real SDK client (or integration test client)
+    sdk = HiAgentSDK(api_key=test_key)
+    service = ChatService(sdk=sdk)
+
+    result = service.invoke(AgentInput(prompt="Hello"))
+
+    # Verify response is from real API, not hardcoded
+    assert result.response is not None
+    assert len(result.response) > 0
+    assert result.response != "fake response"  # Catch hardcoded!
+    assert result.response != "stub"
+    assert "error" not in result.response.lower() or result.is_error
+
+    # Verify response structure from real API
+    assert result.tokens_used > 0  # Real API returns token count
+    assert result.model is not None  # Real API returns model name
+```
+
+### Metrics/Observability Verification
+
+For functions that record metrics:
+
+```python
+# GOOD - Verifies metrics actually recorded
+def test_record_metric():
+    # Use real prometheus registry
+    registry = CollectorRegistry()
+    service = MetricsService(registry=registry)
+
+    service.record_metric("request_count", 1.0)
+
+    # Verify metric was actually recorded
+    metrics = list(registry.collect())
+    assert any(m.name == "request_count" for m in metrics)
+
+    # Verify value
+    request_count = registry.get_sample_value("request_count")
+    assert request_count == 1.0  # Would fail if no-op!
 ```
 
 ### Field Verification
@@ -292,6 +349,71 @@ def test_create_session_links_to_user():
     assert session.id in [s.id for s in user_sessions]
 ```
 
+## Rule 8: Anti-Fake Tests (CRITICAL)
+
+Every function that could be faked MUST have tests that catch fakes.
+
+### Detect Hardcoded Responses
+
+```python
+# For any function that returns data:
+def test_invoke_not_hardcoded():
+    # Call with different inputs
+    result1 = service.invoke(AgentInput(prompt="Hello"))
+    result2 = service.invoke(AgentInput(prompt="Goodbye"))
+
+    # Different inputs MUST produce different outputs
+    # (catches hardcoded return values)
+    assert result1.response != result2.response
+```
+
+### Detect In-Memory Storage
+
+```python
+# For any CRUD function:
+def test_create_persists_to_database():
+    # Create in one service instance
+    service1 = UserService(db=db)
+    user = service1.create(CreateUserInput(email="test@example.com"))
+
+    # Retrieve from NEW service instance
+    service2 = UserService(db=db)
+    found = service2.get_by_id(user.id)
+
+    # Must find it (fails if in-memory dict!)
+    assert found is not None
+    assert found.email == "test@example.com"
+```
+
+### Detect No-Op Functions
+
+```python
+# For any function with side effects:
+def test_record_metric_has_effect():
+    service = MetricsService(registry=registry)
+
+    # Record a metric
+    service.record_metric("test_metric", 42.0)
+
+    # Verify the side effect occurred
+    value = registry.get_sample_value("test_metric")
+    assert value == 42.0  # Fails if no-op!
+```
+
+### Detect Fake External Calls
+
+```python
+# For any function that calls external API:
+def test_sdk_call_is_real():
+    service = ChatService(sdk=real_sdk_client)
+
+    result = service.invoke(AgentInput(prompt="What is 2+2?"))
+
+    # Real API would give meaningful response
+    assert "4" in result.response or "four" in result.response.lower()
+    # Fake would return generic "fake response"
+```
+
 ## Derivation Checklist
 
 For each function in `provides:`:
@@ -303,6 +425,9 @@ For each function in `provides:`:
 - [ ] **Behavioral assertions that force real implementation**
 - [ ] **Storage verification for state-changing functions**
 - [ ] **Field verification for returned types**
+- [ ] **Anti-fake test if function could be stubbed**
+- [ ] **Different inputs produce different outputs test**
+- [ ] **Persistence survives new instance test (for CRUD)**
 
 For each event in `emits:`:
 
