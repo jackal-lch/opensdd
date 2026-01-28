@@ -7,7 +7,7 @@ next: phase-04-flows.md
 # Phase 3: Features
 
 <objective>
-Discover comprehensive feature set and prioritize for v1.
+Discover comprehensive feature set and prioritize for implementation.
 </objective>
 
 <prerequisite>
@@ -124,31 +124,29 @@ Use AskUserQuestionTool:
     description: "Let's weight the criteria differently"
 </step>
 
-<step n="5" name="define_mvp_scope">
-Draw the line between v1 and later versions.
+<step n="5" name="finalize_features">
+Confirm the final feature list for implementation.
+
+Present the prioritized feature list to the user.
 
 Use AskUserQuestionTool:
-- question: "Looking at the prioritized list, where should we draw the v1 line?"
+- question: "Here's the complete feature list. Any features to add or remove?"
 - options:
-  - label: "Top 5 features"
-    description: "Focused MVP with core functionality"
-  - label: "Top 10 features"
-    description: "More complete initial offering"
-  - label: "Everything above [threshold]"
-    description: "Include all high-priority features"
-  - label: "Let me pick manually"
-    description: "I'll select which features are in v1"
+  - label: "List looks complete"
+    description: "Ready to proceed with these features"
+  - label: "Add more features"
+    description: "I have additional features to include"
+  - label: "Remove some features"
+    description: "Some features should be cut"
 
 **Document:**
-- v1 Features: [list with IDs]
-- v2 Features: [list with IDs]
-- Future/Maybe: [list with IDs]
+- Final Features: [complete list with IDs and priorities]
 </step>
 
 </steps>
 
 <output>
-Prioritized feature list with v1 scope clearly defined.
+Prioritized feature list ready for implementation.
 </output>
 
 <verify>
@@ -160,7 +158,7 @@ AI self-verification:
 | user_feature_input | User features captured | ✓ / ✗ |
 | merge_and_dedupe | Unified feature list created | ✓ / ✗ |
 | prioritize_features | Features scored and prioritized | ✓ / ✗ |
-| define_mvp_scope | v1 scope defined | ✓ / ✗ |
+| finalize_features | Feature list finalized | ✓ / ✗ |
 
 If any step failed (✗):
 - Return to that step and redo
@@ -171,27 +169,19 @@ If any step failed (✗):
 
 **AI Quick Check (internal):**
 
-Check for scope issues:
+Check for coverage issues:
 ```
-v1_features = get_v1_features()
+features = get_features()
 primary_persona = get_primary_persona()
 must_haves = primary_persona.get("must_haves", [])
 issues = []
 
-# Check 1: Scope size
-if len(v1_features) > 10:
-    issues.append({
-        "type": "scope_bloat",
-        "message": f"V1 has {len(v1_features)} features. Ambitious scopes often lead to project failure.",
-        "suggestion": "Consider moving lower-priority features to v2"
-    })
-
-# Check 2: Must-have coverage
+# Check: Must-have coverage
 for must_have in must_haves:
-    if not any(feature_addresses(f, must_have) for f in v1_features):
+    if not any(feature_addresses(f, must_have) for f in features):
         issues.append({
             "type": "must_have_gap",
-            "message": f"Primary persona needs '{must_have}' but no v1 feature addresses it.",
+            "message": f"Primary persona needs '{must_have}' but no feature addresses it.",
             "suggestion": "Add a feature for this must-have or reconsider if it's truly required"
         })
 ```
@@ -199,14 +189,14 @@ for must_have in must_haves:
 **If no issues found:**
 
 Use AskUserQuestionTool:
-- question: "Features scoped ([N] in v1). Ready to map user flows?"
+- question: "Features finalized ([N] total). Ready to map user flows?"
 - options:
   - label: "Continue to Flows (Recommended)"
-    description: "Scope is reasonable, proceed with confidence"
+    description: "Feature list complete, proceed"
   - label: "Review features"
     description: "Show me the feature list before continuing"
-  - label: "Adjust scope"
-    description: "I want to modify v1 features"
+  - label: "Adjust features"
+    description: "I want to modify the feature list"
   - label: "Save and pause"
     description: "Continue later"
 
@@ -214,7 +204,7 @@ Use AskUserQuestionTool:
 
 Present issues first:
 
-"Before continuing, I found [N] scope issue(s):
+"Before continuing, I found [N] coverage issue(s):
 
 [For each issue:]
 ⚠ [message]
@@ -223,21 +213,18 @@ Present issues first:
 Use AskUserQuestionTool:
 - question: "How would you like to handle this?"
 - options:
-  - If scope_bloat:
-    - label: "Trim scope (Recommended)"
-      description: "Move some features to v2 backlog"
   - If must_have_gap:
     - label: "Add missing feature (Recommended)"
       description: "Include feature for '[must_have]'"
   - Always:
     - label: "Continue anyway"
-      description: "Accept current scope with noted risks"
+      description: "Accept current list with noted gaps"
     - label: "Save and pause"
       description: "Think it over, continue later"
 
 On response:
 - "Continue/Recommended (no issues)": Proceed to <next>
-- "Trim scope/Add missing/Adjust scope": Return to step 5
+- "Add missing/Adjust features": Return to step 5
 - "Continue anyway": Proceed to <next> with warning noted
 - "Save and pause": Save state, end session
 </checkpoint>
@@ -246,7 +233,6 @@ On response:
 1. Save features data:
    ```bash
    python .opensdd/blueprint.state.py set-data 3 features "<JSON of all features>"
-   python .opensdd/blueprint.state.py set-data 3 v1_features "<JSON of v1 feature IDs>"
    python .opensdd/blueprint.state.py complete-phase 3
    ```
 

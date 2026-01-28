@@ -110,16 +110,16 @@ Use AskUserQuestionTool to validate each persona's goals:
 </step>
 
 <step n="4" name="prioritize_users">
-Determine the primary target for v1.
+Determine the primary target persona.
 
 Use AskUserQuestionTool:
-- question: "Which user persona should be the PRIMARY focus for v1?"
+- question: "Which user persona should be the PRIMARY focus?"
 - options: [List of personas with brief descriptions]
 
 Capture the primary persona. All subsequent phases should optimize for this persona first, others second.
 
 Also ask:
-- question: "Are any personas explicitly OUT of scope for v1?"
+- question: "Are any personas explicitly OUT of scope?"
 - options: [List of personas]
 - multiSelect: true
 </step>
@@ -127,7 +127,7 @@ Also ask:
 </steps>
 
 <output>
-User personas with goals, needs, and v1 priority designation.
+User personas with goals, needs, and priority designation.
 </output>
 
 <verify>
@@ -138,7 +138,7 @@ AI self-verification:
 | identify_user_types | User types identified and confirmed | ✓ / ✗ |
 | deep_dive_personas | Each persona deeply understood | ✓ / ✗ |
 | define_goals_and_needs | Goals/needs documented per persona | ✓ / ✗ |
-| prioritize_users | Primary persona for v1 selected | ✓ / ✗ |
+| prioritize_users | Primary persona selected | ✓ / ✗ |
 
 If any step failed (✗):
 - Return to that step and redo

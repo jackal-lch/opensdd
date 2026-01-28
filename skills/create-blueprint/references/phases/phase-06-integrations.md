@@ -27,7 +27,7 @@ If exit code != 0:
 From previous phases:
 ```bash
 python .opensdd/blueprint.state.py get-data 1 vision
-python .opensdd/blueprint.state.py get-data 3 v1_features
+python .opensdd/blueprint.state.py get-data 3 features
 ```
 </input>
 
@@ -52,7 +52,7 @@ AI proactively identifies likely integration needs based on features.
 | **CRM** | Customer data | Salesforce, HubSpot |
 
 **Analysis Process:**
-1. Scan v1 features for integration indicators
+1. Scan features for integration indicators
 2. Identify which categories apply
 3. Note any features that can't work without external services
 
@@ -69,7 +69,7 @@ List each with:
 Let user confirm which integrations apply.
 
 Use AskUserQuestionTool:
-- question: "Which of these integrations do you actually need for v1?"
+- question: "Which of these integrations do you actually need?"
 - options: [List of identified integrations]
 - multiSelect: true
 

@@ -28,7 +28,7 @@ From previous phases:
 ```bash
 python .opensdd/blueprint.state.py get-data 2 personas
 python .opensdd/blueprint.state.py get-data 2 primary_persona
-python .opensdd/blueprint.state.py get-data 3 v1_features
+python .opensdd/blueprint.state.py get-data 3 features
 ```
 </input>
 
@@ -188,11 +188,11 @@ If any step failed (✗):
 
 Check for orphaned features (features with no flow):
 ```
-v1_features = get_v1_features()
+features = get_features()
 flows = get_all_flows()
 issues = []
 
-for feature in v1_features:
+for feature in features:
     feature_in_flow = False
     for flow in flows:
         if feature_used_in_flow(feature, flow):
@@ -210,7 +210,7 @@ for feature in v1_features:
 **If no issues found:**
 
 Use AskUserQuestionTool:
-- question: "Flows mapped. All v1 features covered. Ready for Data?"
+- question: "Flows mapped. All features covered. Ready for Data?"
 - options:
   - label: "Continue to Data (Recommended)"
     description: "Flows are complete, proceed with confidence"
@@ -238,7 +238,7 @@ Use AskUserQuestionTool:
   - label: "Add missing flows (Recommended)"
     description: "Create flows for orphaned features"
   - label: "Remove orphaned features"
-    description: "Cut these features from v1 scope"
+    description: "Cut these features from scope"
   - label: "Continue anyway"
     description: "Proceed, will figure out flows during development"
   - label: "Save and pause"

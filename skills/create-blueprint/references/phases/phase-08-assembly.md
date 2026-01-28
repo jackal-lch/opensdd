@@ -30,7 +30,6 @@ python .opensdd/blueprint.state.py get-data 1 vision
 python .opensdd/blueprint.state.py get-data 2 personas
 python .opensdd/blueprint.state.py get-data 2 primary_persona
 python .opensdd/blueprint.state.py get-data 3 features
-python .opensdd/blueprint.state.py get-data 3 v1_features
 python .opensdd/blueprint.state.py get-data 4 flows
 python .opensdd/blueprint.state.py get-data 5 entities
 python .opensdd/blueprint.state.py get-data 5 relationships
@@ -47,7 +46,7 @@ Pull all data from state and organize for assembly.
 **Retrieve from state:**
 - Phase 1: Vision (one-liner, problem, value, success criteria)
 - Phase 2: Personas (all personas, primary designation)
-- Phase 3: Features (all features, v1 scope, priorities)
+- Phase 3: Features (all features with priorities)
 - Phase 4: Flows (user journeys, decision points, edge cases)
 - Phase 5: Data (entities, relationships, attributes, lifecycle)
 - Phase 6: Integrations (external services, providers, requirements)
@@ -62,16 +61,16 @@ Self-check the blueprint for internal consistency.
 **Verification Questions:**
 
 1. **Vision ↔ Features Alignment**
-   - Does every v1 feature serve the stated vision?
+   - Does every feature serve the stated vision?
    - Are there vision elements not addressed by features?
 
 2. **Features ↔ Personas Alignment**
-   - Does every v1 feature serve at least one persona?
+   - Does every feature serve at least one persona?
    - Does the primary persona have features for their primary goal?
 
 3. **Features ↔ Flows Alignment**
-   - Is every v1 feature represented in at least one flow?
-   - Are there flows that use features not in v1 scope?
+   - Is every feature represented in at least one flow?
+   - Are there flows that use features not in scope?
 
 4. **Flows ↔ Data Alignment**
    - Do flows reference entities that exist in the data model?
@@ -97,7 +96,7 @@ Use AskUserQuestionTool if critical issues found:
     description: "Address issues before finalizing"
   - label: "Note as open questions"
     description: "Document but proceed with blueprint"
-  - label: "Ignore for v1"
+  - label: "Ignore these"
     description: "These are acceptable gaps"
 </step>
 
@@ -116,7 +115,7 @@ Create an executive summary that captures the essence.
 - **One sentence:** What is this product?
 - **One paragraph:** What problem does it solve and for whom?
 - **Key numbers:** How many features, entities, integrations, constraints?
-- **v1 focus:** What's the one thing v1 must nail?
+- **Core focus:** What's the one thing this product must nail?
 
 Review the summary:
 - Is it compelling?
@@ -140,7 +139,7 @@ Write the final blueprint document.
 
 **Key Numbers:**
 - {X} user personas
-- {Y} v1 features
+- {Y} features
 - {Z} data entities
 - {N} integrations
 
@@ -186,17 +185,11 @@ Write the final blueprint document.
 
 ## 3. Features
 
-### v1 Scope
-
 | ID | Feature | Description | Priority | Serves Persona |
 |----|---------|-------------|----------|----------------|
 | F1 | {name} | {description} | {P1/P2/P3} | {persona} |
 | F2 | {name} | {description} | {P1/P2/P3} | {persona} |
 ...
-
-### Post-v1 Backlog
-
-{List of features for future versions}
 
 ---
 
@@ -346,7 +339,7 @@ issues = []
 
 # Vision ↔ Features: Every vision element should have supporting features
 vision = get_vision()
-features = get_v1_features()
+features = get_features()
 for element in vision.key_elements:
     if not any(feature_supports(f, element) for f in features):
         issues.append(f"Vision element '{element}' has no supporting feature")
@@ -436,7 +429,7 @@ On response:
    This document contains everything needed to begin development:
    - Vision and success criteria
    - User personas and their goals
-   - Prioritized feature list with v1 scope
+   - Prioritized feature list
    - User flows with decision points
    - Data model with entities and relationships
    - Integration requirements

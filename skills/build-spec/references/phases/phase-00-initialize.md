@@ -48,9 +48,9 @@ If output is "NOT_FOUND":
   spec-extract tool not found. Install with:
 
   macOS/Linux:
-  curl -fsSL https://raw.githubusercontent.com/anthropics/opensdd/main/scripts/install-spec-extract.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/jackal-lch/opensdd/main/scripts/install-spec-extract.sh | bash
 
-  Or see: https://github.com/anthropics/opensdd#installation
+  Or see: https://github.com/jackal-lch/opensdd#installation
   ```
 - STOP workflow.
 

@@ -26,7 +26,7 @@ If exit code != 0:
 <input>
 From previous phases:
 ```bash
-python .opensdd/blueprint.state.py get-data 3 v1_features
+python .opensdd/blueprint.state.py get-data 3 features
 python .opensdd/blueprint.state.py get-data 4 flows
 ```
 </input>
@@ -72,12 +72,12 @@ For each entity, strip assumptions and define what's actually needed.
 For each entity, ask:
 1. "Is this entity actually needed, or can another entity handle it?"
 2. "What's the minimum data this entity must have for features to work?"
-3. "What data are we tempted to add 'just in case' but don't need for v1?"
+3. "What data are we tempted to add 'just in case' but don't actually need?"
 
 **Apply Occam's Razor:**
 - Prefer fewer entities with clear purposes
 - Avoid entities that "might be useful later"
-- Every entity should map to specific v1 features
+- Every entity should map to specific features
 
 Use AskUserQuestionTool:
 - question: "I've refined the entity list using first principles. Does this feel right?"

@@ -66,7 +66,7 @@ Ask yourself and guide user through:
    - What market or domain is this?
    - What trends or shifts make this relevant now?
 
-2. "What's the 3-year vision, not just v1?"
+2. "What's the 3-year vision, not just the initial launch?"
    - Where could this go if successful?
    - What's the ultimate destination?
 

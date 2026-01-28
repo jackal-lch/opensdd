@@ -89,7 +89,7 @@ Use AskUserQuestionTool:
     description: "Industry standard accessibility compliance"
   - label: "WCAG 2.1 AAA"
     description: "Highest level of accessibility"
-  - label: "Not a priority for v1"
+  - label: "Not a priority"
     description: "Address accessibility post-launch"
 
 5. **Localization**
@@ -98,7 +98,7 @@ Use AskUserQuestionTool:
 - question: "Will this need to support multiple languages?"
 - options:
   - label: "English only"
-    description: "Single language for v1"
+    description: "Single language"
   - label: "Plan for i18n"
     description: "Build with translation support, launch in English"
   - label: "Multiple languages at launch"
@@ -173,7 +173,7 @@ Use AskUserQuestionTool:
   - label: "Build for flexibility"
     description: "Architecture should accommodate changes"
   - label: "Scope is fixed"
-    description: "V1 requirements are locked"
+    description: "Requirements are locked"
   - label: "Normal iteration"
     description: "We'll adjust as we learn"
 </step>
@@ -192,7 +192,7 @@ Compile all constraints into a structured list.
 | Localization | [specific requirement] | [why] | Must/Should/Nice |
 
 Present to user:
-"Here are the consolidated constraints for v1. Does this capture all requirements?"
+"Here are the consolidated constraints. Does this capture all requirements?"
 
 Use AskUserQuestionTool:
 - question: "Are these constraints complete and accurate?"
@@ -202,7 +202,7 @@ Use AskUserQuestionTool:
   - label: "Missing constraints"
     description: "There are additional requirements"
   - label: "Over-constrained"
-    description: "Some constraints are unnecessary for v1"
+    description: "Some constraints are unnecessary"
 </step>
 
 </steps>
