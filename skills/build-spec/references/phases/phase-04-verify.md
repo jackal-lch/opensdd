@@ -7,7 +7,7 @@ next: phase-02-select.md
 # Phase 4: Verify
 
 <objective>
-Run /opensdd:compare to verify implementation. Fix drift if needed. Determine next action.
+Verify implementation: run /opensdd:compare for signatures, check test coverage. Fix issues if needed.
 </objective>
 
 <prerequisite>
@@ -126,7 +126,49 @@ Remaining: {missing} components
 ```
 </step>
 
-<step n="6" name="record_extras">
+<step n="6" name="check_coverage">
+**Verify test coverage meets threshold (80%+)**
+
+Run coverage report for the component:
+
+**Coverage Commands by Framework:**
+
+| Language | Command |
+|----------|---------|
+| TypeScript | `npx vitest run --coverage {test_file}` |
+| Python | `python -m pytest {test_file} --cov={component_module} --cov-report=term` |
+| Go | `go test -coverprofile=coverage.out ./{package}/... && go tool cover -func=coverage.out` |
+| Rust | `cargo tarpaulin --out Stdout` (requires cargo-tarpaulin) |
+
+**Coverage Threshold:**
+- General code: 80%+ required
+- Critical code (auth, security, financial): 100% recommended
+
+**If coverage below threshold:**
+1. Identify uncovered lines/branches
+2. Add additional test cases to cover gaps
+3. Re-run coverage until threshold met
+
+Display coverage result:
+```
+Coverage: {current_component}
+───────────────────────────────
+
+Lines:    {percent}% ({covered}/{total})
+Branches: {percent}%
+Functions: {percent}%
+
+{If below 80%:}
+  WARNING: Coverage below 80% threshold
+  Uncovered areas:
+    - {file}:{line} - {description}
+
+{If >= 80%:}
+  Coverage meets threshold.
+```
+</step>
+
+<step n="7" name="record_extras">
 Note any extras found during this component's verification:
 
 From `extras:` in compare-result.yaml, identify extras related to this component's files.
@@ -150,11 +192,13 @@ AI self-verification:
 | check_component | Component status identified | |
 | handle_drift | All drifts fixed (if any) | |
 | on_match | Progress reported | |
+| check_coverage | Coverage >= 80% | |
 | record_extras | Extras noted | |
 
 **Key verification:**
 - Current component shows `status: match`?
 - If drift was fixed, re-verify passed?
+- Test coverage >= 80%?
 </verify>
 
 <checkpoint required="false">
