@@ -57,18 +57,25 @@ Wait for TDD skill to complete.
 <step n="2" name="verify_completion">
 Verify TDD completed successfully.
 
-Check that:
+TDD phase-04 already verified:
+- All tests pass (none skipped, none failed)
+- Code compiles without errors
+- Coverage >= 80%
+- No placeholder implementations
+- Integration tests pass
+- All types have fields defined
+
+Quick verification:
 - Component file exists at expected path
 - Test file exists at expected path
-- All tests pass (run quick verification)
 
 ```bash
-{TEST_COMMAND}
+# Verify files exist
+test -f "{component_file_path}" && echo "Component: OK" || echo "Component: MISSING"
+test -f "{test_file_path}" && echo "Tests: OK" || echo "Tests: MISSING"
 ```
 
-If tests fail:
-- TDD skill should have fixed this
-- If still failing, investigate and fix manually
+If TDD reported issues, they should already be fixed. If files missing, investigate.
 </step>
 
 <step n="3" name="summarize">
