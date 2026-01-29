@@ -6,411 +6,216 @@ next: phase-04-complete.md
 
 # Phase 3: Iterate (TDD Loop)
 
-<objective>
-Execute RED-GREEN-REFACTOR cycle for each function in order.
-</objective>
+Execute RED → GREEN → REFACTOR for each function in dependency order.
 
-<prerequisite>
-Phase 2 must be complete with:
-- Test file created (all tests skipped)
-- Component skeleton created
-- function_order available
-</prerequisite>
+**Before starting:** Read `rules.md § Absolute Rule`
 
-<input>
-From previous phases:
-- `TARGET_COMPONENT`: Component name
-- `function_order`: Ordered list of functions with test cases
-- `TEST_FILE_PATH`: Path to test file
-- `COMPONENT_FILE_PATH`: Path to component file
-- `TYPES_FILE_PATH`: Path to types file (update as needed during implementation)
-- `TEST_COMMAND`: Command to run tests
+---
 
-Iteration state:
-- `current_function_index`: Which function we're on (starts at 0)
-- `functions_completed`: List of completed functions
-</input>
+## Prerequisites
 
-<steps>
+From Phase 2:
+- Test file exists (all tests skipped)
+- Component skeleton exists (functions throw "not implemented")
+- `function_order` list ready
+- `potentially_blocked` list (may be empty) from Phase 1 CoV
+- `blocked_functions` initialized as empty list
 
-<step n="1" name="select_function">
-Get next function from function_order.
+---
 
+## For Each Function
+
+Repeat Steps 1-11 for each function in `function_order`.
+
+---
+
+### Step 1: Select Function
+
+Get `current_function = function_order[current_function_index]`
+
+Print:
 ```
-current_function = function_order[current_function_index]
-```
-
-Display:
-```
-═══════════════════════════════════════════════════════════════
-TDD Iteration: {current_function.name}
-Function {current_function_index + 1} of {function_order.length}
-═══════════════════════════════════════════════════════════════
-
-Purpose: {current_function.for}
-Tests:   {current_function.tests.length} cases
-```
-</step>
-
-<step n="2" name="red_enable_tests">
-**RED PHASE: Enable tests for this function**
-
-Edit test file to unskip/enable tests for current function.
-
-**By framework:**
-
-| Framework | Change |
-|-----------|--------|
-| Vitest/Jest | `describe.skip('{fn}', ...)` → `describe('{fn}', ...)` |
-| pytest | Remove `@pytest.mark.skip` decorator |
-| Go | Remove `t.Skip()` call |
-| Rust | Remove `#[ignore]` attribute |
-
-After enabling, the test block should run.
-</step>
-
-<step n="3" name="red_verify_fail">
-**RED PHASE: Verify tests FAIL**
-
-Run tests:
-```bash
-{TEST_COMMAND}
+┌─────────────────────────────────────────────────────────────┐
+│ TDD: {function_name}                                        │
+│ Function {index + 1} of {total}                             │
+├─────────────────────────────────────────────────────────────┤
+│ Purpose: {for description from spec}                        │
+│ Tests:   {count} cases                                      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Expected:** Tests for current_function FAIL (skeleton throws "not implemented")
+---
 
-**Parse output:**
-- Count failed tests for this function
-- Ensure they fail for right reason (not implemented, not syntax error)
+### Step 2: Check Implementability
 
-Display:
-```
-RED: {current_function.name}
-─────────────────────────────
+Before enabling tests, verify function is implementable.
 
-Tests enabled: {count}
-Tests failed:  {count} ✗ (expected)
+→ See: `rules.md § Not Implementable Detection`
 
-Failure reason: "TDD: Not yet implemented"
+**Ask:**
+1. Can I write the implementation body with info available?
+2. What would the implementation look like?
 
-Ready to implement...
-```
+**If NOT IMPLEMENTABLE:**
 
-**If tests pass unexpectedly:**
-- Warning: Function may already be implemented
-- Or tests aren't actually testing this function
-- Investigate before proceeding
-
-**If syntax/import error:**
-- Fix error in test file
-- Re-run this step
-</step>
-
-<step n="4" name="green_implement">
-**GREEN PHASE: Implement the function**
-
-Implement code that **achieves the `for:` description** and passes all tests.
-
-**ABSOLUTE RULE: NEVER ADD PLACEHOLDERS TO PASS TESTS**
-
-```
-╔═══════════════════════════════════════════════════════════════════╗
-║  IF the only way to pass a test is to add a placeholder/fake:     ║
-║                                                                   ║
-║    1. STOP - Do not add the placeholder                           ║
-║    2. The TEST is too weak, not the implementation                ║
-║    3. Go back and STRENGTHEN the test first                       ║
-║    4. Then implement REAL logic to pass the stronger test         ║
-║                                                                   ║
-║  NEVER fake it to make it green. Fix the test instead.            ║
-╚═══════════════════════════════════════════════════════════════════╝
+```yaml
+blocked_functions.append({
+  name: current_function.name,
+  reason: "{specific reason}",
+  missing: ["{list what's missing}"],
+  phase: "iterate"
+})
 ```
 
-**Forbidden shortcuts:**
-- `return "fake_value"` - Use real computation
-- `return Mock()` - Use real dependencies
-- `_data = {}` - Use real database/repository
-- `pass` - Implement real logic
-- `raise NotImplementedError` - Implement it now
-- Hardcoded values that happen to match test expectations
-
-**CRITICAL: "Minimal" means NO OVER-ENGINEERING, not PLACEHOLDERS/FAKES**
-
+Print:
 ```
-WRONG interpretation of "minimal":
-  - Hardcoded return values ("fake_token", "test_user")
-  - Stub implementations that just return the right type
-  - Empty type definitions with `pass`
-  - In-memory dicts instead of database (_users = {}, _configs = {})
-  - No-op functions (def record(): pass)
-  - Fake SDK calls that return hardcoded responses
+⚠️  BLOCKED: {function_name}
+─────────────────────────────────────────
+Reason: {reason}
+Missing:
+  - {missing_item_1}
+  - {missing_item_2}
 
-CORRECT interpretation of "minimal":
-  - Real logic that achieves the `for:` purpose
-  - Actually call external services (SDK, API, database)
-  - Actually persist data (via repository, not in-memory dict)
-  - Actually compute values (not hardcoded strings)
-  - No premature abstractions
-  - No features beyond what's tested
+Skipping to next function...
+─────────────────────────────────────────
 ```
 
-**ANTI-PATTERNS TO AVOID:**
+→ Skip to Step 11 (Record & Continue)
+
+**If IMPLEMENTABLE:** → Continue to Step 3 (RED — Enable Tests)
+
+---
+
+### Step 3: RED — Enable Tests
+
+Edit test file. Enable tests for this function only.
+
+→ Syntax: `lookup.md § Skip Syntax`
+
+---
+
+### Step 4: RED — Run & Report
+
+Run: `{TEST_COMMAND}` (from `lookup.md § Test Commands`)
+
+Print report using format from `lookup.md § Report Formats → RED Report`
+
+**Do not proceed yet.**
+
+---
+
+### Step 5: RED — Verify
+
+Answer questions from `rules.md § Verification Questions → RED Phase`
+
+**Proceed only when all conditions met.**
+
+If not met: Fix issue → Go back to Step 4.
+
+---
+
+### Step 6: GREEN — Implement
+
+Implement function with REAL logic.
+
+→ Requirements: `rules.md § Implementation Requirements`
+→ What to avoid: `rules.md § Fakes vs Real`
+
+**Remember:** `rules.md § Absolute Rule`
+
+---
+
+### Step 7: GREEN — Run & Report
+
+Run: `{TEST_COMMAND}`
+
+Print report using format from `lookup.md § Report Formats → GREEN Report`
+
+**Do not proceed yet.**
+
+---
+
+### Step 8: GREEN — Verify
+
+Answer questions from `rules.md § Verification Questions → GREEN Phase`
+
+**Proceed only when all conditions met.**
+
+If tests fail: Fix implementation → Go back to Step 7.
+
+---
+
+### Step 9: Reality Check
+
+Answer questions from `rules.md § Reality Checks`
+
+**If any check fails:**
+1. Test is too weak
+2. Strengthen the test (see `rules.md § When to Strengthen Tests`)
+3. Re-implement
+4. Go back to Step 7
+
+---
+
+### Step 10: REFACTOR (Optional)
+
+Improve code while keeping tests green.
+
+→ Guidelines: `rules.md § Refactoring Rules`
+
+After changes: Run tests → Print `lookup.md § Report Formats → REFACTOR Report`
+
+---
+
+### Step 11: Record & Continue
 
 ```python
-# WRONG - Fake SDK call
-def invoke(self, input: AgentInput) -> AgentResult:
-    return AgentResult(response="fake response")  # FAKE!
+if current_function was blocked:
+    blocked_functions.append(current_function)
+else:
+    functions_completed.append(current_function.name)
 
-# CORRECT - Real SDK call
-def invoke(self, input: AgentInput) -> AgentResult:
-    response = self.sdk_client.chat(input.prompt)
-    return AgentResult(response=response.content)
-
-# WRONG - In-memory storage
-_users: dict[str, User] = {}
-def create_user(self, data: CreateUserInput) -> User:
-    user = User(id=uuid4(), **data)
-    _users[user.id] = user  # NOT PERSISTED!
-    return user
-
-# CORRECT - Database persistence
-def create_user(self, data: CreateUserInput) -> User:
-    user = User(id=uuid4(), **data)
-    self.db.add(user)
-    self.db.commit()  # ACTUALLY PERSISTED
-    return user
-
-# WRONG - No-op function
-def record_metric(self, name: str, value: float) -> None:
-    pass  # DOES NOTHING!
-
-# CORRECT - Real metrics
-def record_metric(self, name: str, value: float) -> None:
-    self.prometheus_counter.labels(name=name).inc(value)
-```
-
-**Implementation Requirements:**
-
-1. **Function MUST achieve its `for:` description**
-   - If `for:` says "Authenticate credentials" → actually verify credentials
-   - If `for:` says "Create user" → actually persist to storage
-   - If `for:` says "Generate token" → actually generate a valid token
-
-2. **Type fields MUST be defined when used**
-   - When implementing a function that returns `TokenPair`:
-     - Define `TokenPair` fields: `access_token`, `refresh_token`, `expires_in`
-   - When implementing a function that takes `CreateUserInput`:
-     - Define `CreateUserInput` fields: `email`, `name`, `password`
-   - Update type definitions in the types file as you implement
-
-3. **Storage operations MUST persist data**
-   - Don't just return objects - store them
-   - Use the repository/storage layer defined in spec
-   - Verify data can be retrieved after creation
-
-**Implementation checklist:**
-- [ ] Function achieves its `for:` description (not just returns right type)
-- [ ] Follow exact signature from spec
-- [ ] Define type fields when implementing functions that use them
-- [ ] Persist data for create/update operations
-- [ ] Validate input for validation functions
-- [ ] Generate real values (tokens, IDs) not hardcoded strings
-- [ ] Handle error cases with appropriate error types
-- [ ] Follow conventions from spec
-
-**Example - CORRECT implementation:**
-
-```python
-# for: "Authenticate user credentials and create session"
-def login(self, credentials: Credentials) -> TokenPair | AuthError:
-    # 1. Actually validate credentials against storage
-    user = self.user_repo.find_by_email(credentials.email)
-    if not user:
-        return AuthError(code="USER_NOT_FOUND")
-
-    if not verify_password(credentials.password, user.password_hash):
-        return AuthError(code="INVALID_PASSWORD")
-
-    # 2. Actually create a session
-    session = Session(
-        user_id=user.id,
-        created_at=datetime.now(),
-        expires_at=datetime.now() + timedelta(hours=24)
-    )
-    self.session_repo.save(session)
-
-    # 3. Actually generate tokens
-    access_token = generate_jwt(user_id=user.id, expires_in=3600)
-    refresh_token = generate_refresh_token()
-
-    # 4. Return fully populated type
-    return TokenPair(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        expires_in=3600,
-        token_type="Bearer"
-    )
-```
-
-**Update types as you implement:**
-
-When you need a field on a type that's not defined, add it:
-
-```python
-# Before (scaffold stub):
-@dataclass
-class TokenPair:
-    pass
-
-# After (during implementation):
-@dataclass
-class TokenPair:
-    access_token: str
-    refresh_token: str
-    expires_in: int
-    token_type: str
-```
-
-Edit COMPONENT_FILE_PATH to implement the function.
-Edit types file to define type fields as needed.
-</step>
-
-<step n="5" name="green_verify_pass">
-**GREEN PHASE: Verify tests PASS**
-
-Run tests:
-```bash
-{TEST_COMMAND}
-```
-
-**Expected:** All tests for current_function PASS
-
-Display:
-```
-GREEN: {current_function.name}
-───────────────────────────────
-
-Tests passed: {count}/{count} ✓
-
-All tests passing. Consider refactoring...
-```
-
-**If tests still fail:**
-1. Read failure message
-2. Fix implementation
-3. Re-run tests
-4. Repeat until green
-
-Do NOT proceed until all tests for this function pass.
-</step>
-
-<step n="6" name="refactor">
-**REFACTOR PHASE: Improve while staying green**
-
-Review the implementation and improve:
-
-**Refactoring checklist:**
-- [ ] Remove duplication
-- [ ] Improve naming
-- [ ] Extract helper methods (if appropriate)
-- [ ] Simplify conditionals
-- [ ] Add meaningful comments (only where needed)
-- [ ] Ensure code follows conventions
-
-**TDD Discipline:** Only refactor if there's clear benefit. Don't gold-plate.
-
-After any change, run tests to verify still green:
-```bash
-{TEST_COMMAND}
-```
-
-If tests fail → undo change, try different approach.
-
-Display:
-```
-REFACTOR: {current_function.name}
-─────────────────────────────────
-
-Changes made:
-  - {description of refactoring, or "No refactoring needed"}
-
-Tests: Still passing ✓
-```
-</step>
-
-<step n="7" name="record_progress">
-Record completion and check for next function.
-
-```
-functions_completed.push(current_function.name)
 current_function_index += 1
 ```
 
-Display:
+Print using `lookup.md § Report Formats → Completion Report`
+
+**Progress shows blocked count:**
 ```
-Completed: {current_function.name}
-──────────────────────────────────
-
-Progress: {current_function_index}/{function_order.length} functions
-
-{If more functions:}
-  Next: {function_order[current_function_index].name}
-
-{If all done:}
-  All functions implemented!
+✓ COMPLETED: {function_name}
+  Progress: {completed}/{total} functions ({blocked} blocked)
+  Next: {next_function_name or "All done!"}
 ```
-</step>
 
-</steps>
+**If more functions:** Go to Step 1 with next function.
 
-<output>
-Current function implemented and tested. Ready for next function or completion.
-</output>
+**If all done:** Proceed to Phase 4.
 
-<verify>
-AI self-verification for current function:
+---
 
-| Step | Expected Output | Status |
-|------|-----------------|--------|
-| select_function | Function selected | |
-| red_enable_tests | Tests enabled (unskipped) | |
-| red_verify_fail | Tests fail as expected | |
-| green_implement | Function implemented | |
-| green_verify_pass | All tests pass | |
-| refactor | Code improved (if needed) | |
-| record_progress | Progress recorded | |
+## Summary
 
-**TDD verification:**
-- Tests failed BEFORE implementation? (true RED)
-- Tests pass AFTER implementation? (true GREEN)
-- Tests still pass after refactor? (safe REFACTOR)
+```
+FOR EACH function:
+  Step 1:  Select
+  Step 2:  Check Implementability
+           → If NOT IMPLEMENTABLE: skip to Step 11
+  Step 3:  Enable tests (RED)
+  Step 4:  Run & print RED REPORT
+  Step 5:  Verify RED (answer questions)
+  Step 6:  Implement (REAL logic)
+  Step 7:  Run & print GREEN REPORT
+  Step 8:  Verify GREEN (answer questions)
+  Step 9:  Reality Check (4 questions)
+  Step 10: Refactor (optional)
+  Step 11: Record progress (track blocked count)
+NEXT function
+```
 
-**CRITICAL - No placeholders check:**
-- [ ] No `return "fake..."` or hardcoded strings
-- [ ] No `_data = {}` in-memory storage
-- [ ] No `pass` or `raise NotImplementedError`
-- [ ] No `Mock()` or fake dependencies
-- [ ] Implementation achieves `for:` description with REAL logic
-
-If any placeholder was added → DELETE IT, strengthen the test, re-implement.
-</verify>
-
-<checkpoint required="false">
-No user checkpoint during iteration. TDD provides its own feedback loop.
-</checkpoint>
+---
 
 <next>
-**If more functions remain:**
-```
-current_function_index < function_order.length
-```
-→ Loop back to step 1 (select next function)
+**If more functions remain:** Loop to Step 1
 
-**If all functions complete:**
-```
-current_function_index >= function_order.length
-```
-1. Speak: "All functions implemented via TDD!"
-
-2. Load: `phase-04-complete.md` (same folder)
+**If all functions complete:** Load `phase-04-complete.md`
 </next>

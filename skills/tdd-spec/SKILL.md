@@ -9,61 +9,29 @@ user-invocable: true
 
 Implement a component using true Test-Driven Development.
 
-## Philosophy
+## Usage
 
 ```
-FOR EACH function in component:
-    RED     → Write/enable failing test
-    GREEN   → Implement minimal code to pass
-    REFACTOR → Improve while staying green
+/opensdd:tdd-spec AuthService
 ```
 
-Tests are derived from spec.yaml, but implementation follows classic TDD:
-- One function at a time
-- Tight feedback loop
-- Minimal implementation
-- Continuous refactoring
-
-## When to Use
-
-- At build-spec phase-03 (implements entire component via TDD)
-- Standalone to TDD-implement any spec-defined component
-
-## Input
-
-Component name as argument: `/opensdd:tdd-spec AuthService`
-
-## Output
-
-- Component fully implemented
-- All tests passing
-- Ready for signature verification (compare-spec)
-
-## Phases
-
-| Phase | Name | Purpose |
-|-------|------|---------|
-| 1 | Analyze | Parse spec, derive test cases per function |
-| 2 | Setup | Create test file (skipped) + component skeleton |
-| 3 | Iterate | RED-GREEN-REFACTOR loop per function |
-| 4 | Complete | Verify all green, return to caller |
-
-## The TDD Loop (Phase 3)
+## Workflow
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Function: login                                        │
-│                                                         │
-│  1. ENABLE tests for login (unskip)                     │
-│  2. RUN tests → verify FAIL (RED) ✗                     │
-│  3. IMPLEMENT login() minimally                         │
-│  4. RUN tests → verify PASS (GREEN) ✓                   │
-│  5. REFACTOR login() if needed                          │
-│  6. RUN tests → verify still PASS ✓                     │
-│  7. NEXT function                                       │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+Phase 1: Analyze  → Parse spec, derive tests, order by dependency
+Phase 2: Setup    → Create test file (skipped) + component skeleton
+Phase 3: Iterate  → RED → GREEN → REFACTOR per function
+Phase 4: Complete → Verify all green, check for fakes
 ```
+
+## Reference Files
+
+| File | Contains |
+|------|----------|
+| `rules.md` | Absolute Rule, Reality Checks, Test Smells, Fakes vs Real |
+| `lookup.md` | Test commands, Skip syntax, File patterns, Report formats |
+| `derivation-rules.md` | How to derive tests from spec.yaml |
+| `patterns/*.md` | Language-specific test code examples |
 
 ## Start
 

@@ -12,7 +12,8 @@ Verify all tests pass, run final checks, and return to caller with fully impleme
 
 <prerequisite>
 Phase 3 must be complete with:
-- All functions in function_order implemented
+- All implementable functions in function_order implemented
+- Non-implementable functions recorded in blocked_functions
 - All tests passing
 </prerequisite>
 
@@ -21,6 +22,7 @@ From previous phases:
 - `TARGET_COMPONENT`: Component name
 - `function_order`: All functions (now implemented)
 - `functions_completed`: List of completed functions
+- `blocked_functions`: List of functions that could not be implemented
 - `TEST_FILE_PATH`: Path to test file
 - `COMPONENT_FILE_PATH`: Path to component file
 - `TYPES_FILE_PATH`: Path to types file (for the layer)
@@ -101,7 +103,45 @@ TDD should produce high coverage - review implementation
 ```
 </step>
 
-<step n="4" name="verify_no_placeholders">
+<step n="4" name="report_blocked_functions">
+**Report any functions that could not be implemented.**
+
+If `blocked_functions` is not empty:
+
+```
+Blocked Functions Report
+════════════════════════════════════════════════════════════════
+
+{count} function(s) could not be implemented due to missing information.
+
+{For each blocked function:}
+┌─────────────────────────────────────────────────────────────┐
+│ {function_name}                                              │
+├─────────────────────────────────────────────────────────────┤
+│ Reason:  {reason}                                            │
+│ Missing:                                                     │
+│   • {missing_item_1}                                         │
+│   • {missing_item_2}                                         │
+│ Suggested Fix:                                               │
+│   {suggested_fix}                                            │
+└─────────────────────────────────────────────────────────────┘
+
+Action Required:
+  1. Update spec.yaml or blueprint with missing information
+  2. Re-run /opensdd:tdd-spec {TARGET_COMPONENT}
+  3. Or manually implement these functions if info is available elsewhere
+
+════════════════════════════════════════════════════════════════
+```
+
+If `blocked_functions` is empty:
+```
+Blocked Functions: None ✓
+All functions successfully implemented.
+```
+</step>
+
+<step n="5" name="verify_no_placeholders">
 **Verify no placeholder or fake implementations remain.**
 
 Search for placeholder patterns in component and types files:
@@ -176,7 +216,7 @@ Tests need stronger assertions to force real implementation.
 ```
 </step>
 
-<step n="5" name="run_integration_tests">
+<step n="6" name="run_integration_tests">
 **Run integration tests to verify components work together.**
 
 Integration tests verify:
@@ -232,7 +272,7 @@ Component integrates correctly with dependencies.
 - Verify storage operations work correctly
 </step>
 
-<step n="6" name="verify_types_complete">
+<step n="7" name="verify_types_complete">
 **Verify all type definitions have fields (not empty).**
 
 Read types file and check each type used by this component:
@@ -267,7 +307,7 @@ class TokenPair:
 Fix any empty types before proceeding.
 </step>
 
-<step n="7" name="display_summary">
+<step n="8" name="display_summary">
 Display final TDD summary.
 
 ```
@@ -282,11 +322,22 @@ Functions Implemented (via TDD):
   ✓ {function_2} ({test_count} tests)
   ...
 
+{If blocked_functions not empty:}
+Functions Blocked (need human input):
+  ✗ {blocked_function_1}: {reason}
+  ✗ {blocked_function_2}: {reason}
+
 Summary:
-  Functions:  {count}
-  Tests:      {total_tests}
-  Coverage:   {percent}%
-  Status:     ALL GREEN ✓
+  Functions:   {total}
+  Implemented: {completed_count} ✓
+  Blocked:     {blocked_count} ⚠️
+  Tests:       {total_tests}
+  Coverage:    {percent}%
+  Status:      {ALL GREEN if no blocked, else PARTIAL}
+
+{If blocked_count > 0:}
+⚠️  {blocked_count} function(s) need additional specification.
+    See Blocked Functions Report above.
 
 TDD Cycle Complete:
   RED    → Tests written before implementation
@@ -315,17 +366,20 @@ AI self-verification:
 | run_all_tests | All tests pass | |
 | verify_syntax | No syntax errors | |
 | check_coverage | Coverage >= 80% | |
+| report_blocked_functions | Blocked items documented | |
 | verify_no_placeholders | No placeholders found | |
 | run_integration_tests | Integration tests pass | |
 | verify_types_complete | All types have fields | |
 | display_summary | Summary displayed | |
 
 **Final checks:**
-- [ ] All functions from function_order are implemented
+- [ ] All implementable functions are implemented
 - [ ] All tests pass (none skipped)
 - [ ] Code compiles without errors
 - [ ] Coverage meets threshold
 - [ ] No placeholder implementations remain
+- [ ] Blocked functions documented with clear reasons
+- [ ] Blocked functions have suggested fixes
 - [ ] Integration tests pass
 - [ ] All types have fields defined (not empty)
 </verify>

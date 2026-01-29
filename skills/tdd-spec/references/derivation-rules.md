@@ -1,28 +1,12 @@
 # Test Derivation Rules
 
-Rules for transforming spec.yaml definitions into test cases.
+Algorithm for transforming spec.yaml into test cases.
 
-## Core Principle: Behavioral Tests
+**Core Principle:** Tests must verify behavior, not just types.
 
-**Tests MUST verify actual behavior, not just return types.**
+→ See: `rules.md` for TDD execution rules, anti-fake patterns, and test quality guidelines.
 
-```python
-# BAD - Passes with placeholder stub
-def test_login():
-    result = auth.login(credentials)
-    assert isinstance(result, TokenPair)  # Placeholder returns TokenPair too!
-
-# GOOD - Forces real implementation
-def test_login_authenticates_valid_credentials():
-    result = auth.login(valid_credentials)
-    assert result.access_token is not None
-    assert len(result.access_token) > 20  # Real JWT
-    decoded = decode_jwt(result.access_token)
-    assert decoded["user_id"] == expected_user.id
-    assert decoded["exp"] > time.time()  # Not expired
-```
-
-**Key insight:** If a test can pass with a hardcoded stub, the test is too weak.
+---
 
 ## Overview
 
@@ -202,31 +186,193 @@ subscribes:
 
 ## Rule 6: Test Type Classification
 
-Assign test type based on component layer and function characteristics.
+Assign test type based on component layer.
 
-### Layer-Based Classification
+→ See: `lookup.md § Layer Classification`
 
-| Component Layer | Default Test Type |
-|-----------------|-------------------|
-| domain | unit |
-| application | integration |
-| infrastructure | integration |
+---
 
-### Override Rules
+## Test Structure Patterns
 
-Force unit test when:
-- Function is pure (no side effects)
-- Function only uses other domain components
+How to organize tests for clarity and comprehensive coverage.
 
-Force integration test when:
-- Function interacts with external services
-- Function reads/writes to database
-- Function makes HTTP calls
-- Function uses file system
+### Pattern 1: Table-Driven Tests (Preferred for Multiple Cases)
 
-## Rule 7: Behavioral Assertions (CRITICAL)
+When a function has multiple input/output combinations, use table-driven structure:
+
+```python
+# Python with pytest.parametrize
+@pytest.mark.parametrize("input_data,expected_type,description", [
+    (valid_credentials(), TokenPair, "valid credentials"),
+    (wrong_password(), AuthError, "invalid password"),
+    (unknown_email(), AuthError, "unknown user"),
+    (empty_email(), ValidationError, "empty email"),
+])
+def test_login(input_data, expected_type, description):
+    result = auth.login(input_data)
+    assert isinstance(result, expected_type), f"Failed: {description}"
+```
+
+```typescript
+// TypeScript with Vitest/Jest
+describe('login', () => {
+  const cases = [
+    { input: validCredentials, expected: 'TokenPair', desc: 'valid credentials' },
+    { input: wrongPassword, expected: 'AuthError', desc: 'invalid password' },
+    { input: unknownEmail, expected: 'AuthError', desc: 'unknown user' },
+  ]
+
+  cases.forEach(({ input, expected, desc }) => {
+    it(`returns ${expected} for ${desc}`, () => {
+      const result = auth.login(input)
+      expect(result.constructor.name).toBe(expected)
+    })
+  })
+})
+```
+
+```go
+// Go table-driven
+func TestLogin(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    Credentials
+        wantErr  bool
+        errType  error
+    }{
+        {"valid credentials", validCreds, false, nil},
+        {"invalid password", wrongPwd, true, ErrAuthFailed},
+        {"unknown user", unknownUser, true, ErrUserNotFound},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, err := auth.Login(tt.input)
+            if tt.wantErr {
+                assert.ErrorIs(t, err, tt.errType)
+            } else {
+                assert.NoError(t, err)
+                assert.NotNil(t, result)
+            }
+        })
+    }
+}
+```
+
+**When to use:** Multiple similar test cases, error type coverage, edge case enumeration.
+
+### Pattern 2: Arrange-Act-Assert (Preferred for Complex Single Cases)
+
+When a test has complex setup or multiple assertions:
+
+```python
+def test_login_creates_session_and_returns_tokens():
+    # ARRANGE - Setup test data and dependencies
+    user = create_test_user(email="test@example.com", password="secret123")
+    credentials = Credentials(email="test@example.com", password="secret123")
+
+    # ACT - Execute the function under test
+    result = auth.login(credentials)
+
+    # ASSERT - Verify all expected outcomes
+    assert isinstance(result, TokenPair)
+    assert result.access_token is not None
+    assert result.refresh_token is not None
+
+    # Verify session was created
+    session = session_repo.get_by_user(user.id)
+    assert session is not None
+    assert session.is_active
+```
+
+**When to use:** Complex setup, multiple related assertions, integration tests.
+
+### Pattern 3: Given-When-Then (For Behavior-Focused Tests)
+
+When test names should clearly describe behavior:
+
+```python
+class TestLogin:
+    def test_given_valid_credentials_when_login_then_returns_token_pair(self):
+        # Given
+        user = create_user(password="correct")
+        credentials = Credentials(email=user.email, password="correct")
+
+        # When
+        result = auth.login(credentials)
+
+        # Then
+        assert isinstance(result, TokenPair)
+        assert result.access_token is not None
+
+    def test_given_wrong_password_when_login_then_returns_auth_error(self):
+        # Given
+        user = create_user(password="correct")
+        credentials = Credentials(email=user.email, password="wrong")
+
+        # When
+        result = auth.login(credentials)
+
+        # Then
+        assert isinstance(result, AuthError)
+        assert result.code == "INVALID_PASSWORD"
+```
+
+**When to use:** BDD-style projects, when test names should be readable as specifications.
+
+### Pattern 4: Test Fixtures for Shared Setup
+
+When multiple tests need similar setup:
+
+```python
+@pytest.fixture
+def auth_service(test_db, user_repo, session_repo):
+    """Provides configured AuthService for tests."""
+    return AuthService(
+        user_repo=user_repo,
+        session_repo=session_repo,
+        token_generator=JWTGenerator(secret="test-secret")
+    )
+
+@pytest.fixture
+def valid_user(user_repo):
+    """Creates a valid user for authentication tests."""
+    user = User(email="test@example.com", password_hash=hash("password123"))
+    user_repo.save(user)
+    return user
+
+def test_login_success(auth_service, valid_user):
+    credentials = Credentials(email=valid_user.email, password="password123")
+    result = auth_service.login(credentials)
+    assert isinstance(result, TokenPair)
+
+def test_login_wrong_password(auth_service, valid_user):
+    credentials = Credentials(email=valid_user.email, password="wrong")
+    result = auth_service.login(credentials)
+    assert isinstance(result, AuthError)
+```
+
+**When to use:** Multiple tests share setup, DRY test code, complex dependencies.
+
+### Choosing the Right Pattern
+
+| Situation | Recommended Pattern |
+|-----------|---------------------|
+| Many similar input/output pairs | Table-Driven |
+| Complex setup with single scenario | Arrange-Act-Assert |
+| Behavior specifications | Given-When-Then |
+| Shared setup across tests | Fixtures |
+| Error case enumeration | Table-Driven |
+| Integration with external services | Arrange-Act-Assert |
+
+---
+
+## Rule 7: Behavioral Assertions
 
 Tests MUST include assertions that **force real implementation**. Type checks alone are insufficient.
+
+→ See: `rules.md § Test Smells` for anti-patterns
+→ See: `rules.md § Reality Checks` for verification questions
 
 ### Assertion Patterns by Action
 
@@ -240,179 +386,22 @@ Tests MUST include assertions that **force real implementation**. Type checks al
 | "Find/Get X" | Returned X matches stored X, all fields populated |
 | "Transform X to Y" | Y has expected structure, Y values derived correctly from X |
 
-### Storage Verification
-
-For any function that modifies state:
-
-```python
-# GOOD - Verifies actual storage (not in-memory dict!)
-def test_create_user():
-    # Use real database session, not mock
-    db = get_test_database()
-    service = UserService(db=db)
-
-    result = service.create(input)
-
-    # Verify returned object
-    assert result.id is not None
-    assert result.email == input.email
-
-    # Verify actually persisted to DATABASE (not in-memory)
-    stored = db.query(User).filter_by(id=result.id).first()
-    assert stored is not None
-    assert stored.email == input.email
-
-    # Verify survives new session (proves real persistence)
-    db.close()
-    new_db = get_test_database()
-    reloaded = new_db.query(User).filter_by(id=result.id).first()
-    assert reloaded is not None  # Would fail if in-memory dict!
-```
-
-### External Service Verification
-
-For functions that call external services (SDK, API):
-
-```python
-# GOOD - Verifies actual external call
-def test_invoke_agent():
-    # Use real SDK client (or integration test client)
-    sdk = HiAgentSDK(api_key=test_key)
-    service = ChatService(sdk=sdk)
-
-    result = service.invoke(AgentInput(prompt="Hello"))
-
-    # Verify response is from real API, not hardcoded
-    assert result.response is not None
-    assert len(result.response) > 0
-    assert result.response != "fake response"  # Catch hardcoded!
-    assert result.response != "stub"
-    assert "error" not in result.response.lower() or result.is_error
-
-    # Verify response structure from real API
-    assert result.tokens_used > 0  # Real API returns token count
-    assert result.model is not None  # Real API returns model name
-```
-
-### Metrics/Observability Verification
-
-For functions that record metrics:
-
-```python
-# GOOD - Verifies metrics actually recorded
-def test_record_metric():
-    # Use real prometheus registry
-    registry = CollectorRegistry()
-    service = MetricsService(registry=registry)
-
-    service.record_metric("request_count", 1.0)
-
-    # Verify metric was actually recorded
-    metrics = list(registry.collect())
-    assert any(m.name == "request_count" for m in metrics)
-
-    # Verify value
-    request_count = registry.get_sample_value("request_count")
-    assert request_count == 1.0  # Would fail if no-op!
-```
-
-### Field Verification
-
-Tests must verify type fields are populated correctly:
-
-```python
-# GOOD - Forces type fields to be implemented
-def test_login_returns_complete_token_pair():
-    result = auth.login(credentials)
-
-    # TokenPair must have these fields (forces type definition)
-    assert result.access_token is not None
-    assert result.refresh_token is not None
-    assert result.expires_in > 0
-    assert result.token_type == "Bearer"
-```
-
-### Relationship Verification
-
-For functions involving relationships:
-
-```python
-# GOOD - Verifies relationships work
-def test_create_session_links_to_user():
-    session = auth.create_session(user_id)
-
-    # Session linked to user
-    assert session.user_id == user_id
-
-    # Can retrieve user's sessions
-    user_sessions = sessions.get_by_user(user_id)
-    assert session.id in [s.id for s in user_sessions]
-```
-
-## Rule 8: Anti-Fake Tests (CRITICAL)
+## Rule 8: Anti-Fake Tests
 
 Every function that could be faked MUST have tests that catch fakes.
 
-### Detect Hardcoded Responses
+→ See: `rules.md § Fakes vs Real` for fake vs real comparison
+→ See: `rules.md § Reality Checks` for the 4 verification checks
+→ See: `rules.md § When to Strengthen Tests` for test improvement patterns
 
-```python
-# For any function that returns data:
-def test_invoke_not_hardcoded():
-    # Call with different inputs
-    result1 = service.invoke(AgentInput(prompt="Hello"))
-    result2 = service.invoke(AgentInput(prompt="Goodbye"))
+### Summary of Anti-Fake Patterns
 
-    # Different inputs MUST produce different outputs
-    # (catches hardcoded return values)
-    assert result1.response != result2.response
-```
-
-### Detect In-Memory Storage
-
-```python
-# For any CRUD function:
-def test_create_persists_to_database():
-    # Create in one service instance
-    service1 = UserService(db=db)
-    user = service1.create(CreateUserInput(email="test@example.com"))
-
-    # Retrieve from NEW service instance
-    service2 = UserService(db=db)
-    found = service2.get_by_id(user.id)
-
-    # Must find it (fails if in-memory dict!)
-    assert found is not None
-    assert found.email == "test@example.com"
-```
-
-### Detect No-Op Functions
-
-```python
-# For any function with side effects:
-def test_record_metric_has_effect():
-    service = MetricsService(registry=registry)
-
-    # Record a metric
-    service.record_metric("test_metric", 42.0)
-
-    # Verify the side effect occurred
-    value = registry.get_sample_value("test_metric")
-    assert value == 42.0  # Fails if no-op!
-```
-
-### Detect Fake External Calls
-
-```python
-# For any function that calls external API:
-def test_sdk_call_is_real():
-    service = ChatService(sdk=real_sdk_client)
-
-    result = service.invoke(AgentInput(prompt="What is 2+2?"))
-
-    # Real API would give meaningful response
-    assert "4" in result.response or "four" in result.response.lower()
-    # Fake would return generic "fake response"
-```
+| Fake Type | Test Strategy |
+|-----------|---------------|
+| Hardcoded response | Different inputs → different outputs |
+| In-memory storage | Data survives new service instance |
+| No-op function | Verify side effects occurred |
+| Fake external call | Verify real API behavior |
 
 ## Derivation Checklist
 
@@ -422,12 +411,8 @@ For each function in `provides:`:
 - [ ] 1 error test per error type in `output:`
 - [ ] Edge case tests for required inputs
 - [ ] Null/empty handling test
-- [ ] **Behavioral assertions that force real implementation**
-- [ ] **Storage verification for state-changing functions**
-- [ ] **Field verification for returned types**
-- [ ] **Anti-fake test if function could be stubbed**
-- [ ] **Different inputs produce different outputs test**
-- [ ] **Persistence survives new instance test (for CRUD)**
+- [ ] Behavioral assertions (→ `rules.md § Test Smells`)
+- [ ] Anti-fake tests (→ `rules.md § Reality Checks`)
 
 For each event in `emits:`:
 

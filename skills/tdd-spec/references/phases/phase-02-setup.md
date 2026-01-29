@@ -14,6 +14,7 @@ Create test file with all tests SKIPPED and component file skeleton. Ready for T
 Phase 1 must be complete with:
 - TARGET_COMPONENT set
 - function_order populated
+- potentially_blocked identified (may be empty)
 - tech_stack.language known
 - structure.tests known
 - TEST_COMMAND derived
@@ -24,6 +25,7 @@ Phase 1 must be complete with:
 From Phase 1 context:
 - `TARGET_COMPONENT`: Component name
 - `function_order`: Ordered list of functions with test cases
+- `potentially_blocked`: Functions flagged during CoV as potentially not implementable
 - `tech_stack.language`: Programming language
 - `structure.tests`: Test directory
 - `structure.layers.{layer}`: Component directory
@@ -36,29 +38,9 @@ From Phase 1 context:
 <step n="1" name="determine_paths">
 Determine file paths based on language and structure.
 
-**Test file path:**
-| Language | Pattern | Example |
-|----------|---------|---------|
-| typescript | `{tests}/{component}.test.ts` | `tests/auth-service.test.ts` |
-| python | `{tests}/test_{component}.py` | `tests/test_auth_service.py` |
-| go | `{layer}/{component}_test.go` | `domain/auth_service_test.go` |
-| rust | `tests/{component}_test.rs` | `tests/auth_service_test.rs` |
+**Determine paths using patterns from:**
 
-**Component file path:**
-| Language | Pattern | Example |
-|----------|---------|---------|
-| typescript | `{layer}/{component}.ts` | `src/domain/auth-service.ts` |
-| python | `{layer}/{component}.py` | `src/domain/auth_service.py` |
-| go | `{layer}/{component}.go` | `domain/auth_service.go` |
-| rust | `{layer}/{component}.rs` | `src/domain/auth_service.rs` |
-
-**Types file path (for the component's layer):**
-| Language | Pattern | Example |
-|----------|---------|---------|
-| typescript | `{layer}/types.ts` | `src/domain/types.ts` |
-| python | `{layer}/types.py` | `src/domain/types.py` |
-| go | `{layer}/types.go` | `domain/types.go` |
-| rust | `{layer}/types.rs` | `src/domain/types.rs` |
+→ See: `lookup.md § File Patterns`
 
 Store:
 - `TEST_FILE_PATH`
@@ -73,14 +55,9 @@ Create test file with ALL tests SKIPPED.
 
 **Reference patterns:** See `references/patterns/{language}.md`
 
-**Skip mechanisms by framework:**
+**Skip mechanisms:**
 
-| Framework | Skip Syntax |
-|-----------|-------------|
-| Vitest/Jest | `it.skip('test name', ...)` or `describe.skip(...)` |
-| pytest | `@pytest.mark.skip(reason="TDD: not yet implemented")` |
-| Go | `t.Skip("TDD: not yet implemented")` |
-| Rust | `#[ignore]` attribute |
+→ See: `lookup.md § Skip Syntax`
 
 **Generate test file structure:**
 
@@ -200,14 +177,9 @@ test -f "{TEST_FILE_PATH}" && echo "Test file: OK" || echo "Test file: MISSING"
 test -f "{COMPONENT_FILE_PATH}" && echo "Component file: OK" || echo "Component file: MISSING"
 ```
 
-**Verify syntax by language:**
+**Verify syntax using COMPILE_CHECK from:**
 
-| Language | Command |
-|----------|---------|
-| TypeScript | `npx tsc --noEmit {files}` |
-| Python | `python -m py_compile {file}` |
-| Go | `go build ./{package}` |
-| Rust | `cargo check` |
+→ See: `lookup.md § Test Commands`
 
 Fix any syntax errors before proceeding.
 </step>
@@ -281,6 +253,11 @@ No user approval needed. Auto-continue to iterate phase.
 2. Initialize iteration state:
    - current_function_index = 0
    - functions_completed = []
+   - blocked_functions = []
 
-3. Load: `phase-03-iterate.md` (same folder)
+3. Pass to Phase 3:
+   - All context from Phase 1
+   - potentially_blocked (for early warning during implementability check)
+
+4. Load: `phase-03-iterate.md` (same folder)
 </next>

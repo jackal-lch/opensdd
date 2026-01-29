@@ -64,12 +64,7 @@ Also extract:
 
 **Derive test commands from language:**
 
-| Language | TEST_COMMAND | COMPILE_CHECK_COMMAND |
-|----------|--------------|----------------------|
-| typescript | `npx vitest run` | `npx tsc --noEmit` |
-| python | `pytest` | `python -m py_compile {file}` |
-| go | `go test ./...` | `go build ./...` |
-| rust | `cargo test` | `cargo check` |
+→ See: `lookup.md § Test Commands`
 
 Store:
 - `TEST_COMMAND`: Command to run tests
@@ -152,7 +147,49 @@ function_order:
 ```
 </step>
 
-<step n="4" name="summarize_analysis">
+<step n="4" name="verify_test_plan">
+Apply Chain of Verification to derived test cases.
+
+**Generate critical questions for each function:**
+
+| Question | Purpose |
+|----------|---------|
+| Can this test be passed with a hardcoded value? | Detect weak assertions |
+| Does this test verify actual behavior or just types? | Ensure behavioral testing |
+| Are there missing error cases from the output union? | Check completeness |
+| Could a different input produce the same expected output? | Detect insufficient variation |
+| Does this function need external info not in spec? | Early implementability check |
+
+**For each function, answer:**
+
+```yaml
+function: {name}
+questions:
+  - q: "Can test pass with hardcoded value?"
+    answer: "YES/NO"
+    action: "If YES → Add assertion for different inputs producing different outputs"
+  - q: "Does test verify behavior, not just types?"
+    answer: "YES/NO"
+    action: "If NO → Add behavioral assertions per rules.md § Test Smells"
+  - q: "Missing error cases?"
+    answer: "List missing / None"
+    action: "If missing → Add tests for each error type"
+  - q: "Needs external info not in spec?"
+    answer: "YES (what) / NO"
+    action: "If YES → Flag as potentially_blocked with reason"
+```
+
+**After answering all questions:**
+
+1. Apply all identified actions (strengthen weak tests, add missing cases)
+2. Collect any `potentially_blocked` items with reasons
+3. Update `function_order` with improved test cases
+4. Re-verify: repeat questions until no further improvements identified
+
+**Store:** `potentially_blocked[]` - functions that may not be implementable
+</step>
+
+<step n="5" name="summarize_analysis">
 Display analysis summary:
 
 ```
@@ -168,9 +205,15 @@ Implementation Order:
   2. {function_name} ({test_count} tests)
   ...
 
+{If potentially_blocked not empty:}
+⚠️  Potentially Blocked (may need human input):
+  - {function_name}: {reason}
+  - {function_name}: {reason}
+
 Total:
   - Functions: {count}
   - Test Cases: {total_count}
+  - Potentially Blocked: {blocked_count}
 
 Proceeding to setup test file and component skeleton...
 ```
@@ -181,6 +224,7 @@ Proceeding to setup test file and component skeleton...
 <output>
 - `TARGET_COMPONENT`: Component name
 - `function_order`: Ordered list of functions with their test cases
+- `potentially_blocked`: List of functions that may not be implementable
 - `tech_stack.language`: Programming language
 - `structure.tests`: Test directory
 - `structure.layers.{layer}`: Component directory
@@ -196,13 +240,18 @@ AI self-verification:
 | load_component_spec | Component definition extracted | |
 | order_functions | Functions ordered by dependency | |
 | derive_test_cases | All functions have test cases | |
+| verify_test_plan | CoV applied, tests strengthened | |
 | summarize_analysis | Summary displayed | |
 
 **Verification checks:**
 - [ ] Every function in `provides` is in function_order
-- [ ] Every function has at least 1 test case
+- [ ] Every function has at least 1 happy path test
+- [ ] Every error type in output unions has a test
+- [ ] Tests include behavioral assertions (not just type checks)
+- [ ] Tests include different-input-different-output assertions
 - [ ] Events and subscriptions have tests
 - [ ] Order respects dependencies
+- [ ] Potentially blocked items have clear reasons documented
 
 If any check fails → identify gap and fix.
 </verify>
@@ -217,6 +266,7 @@ No user approval needed. Auto-continue to setup phase.
 2. Pass to Phase 2:
    - TARGET_COMPONENT
    - function_order
+   - potentially_blocked
    - tech_stack.language
    - structure.tests
    - structure.layers.{layer}
