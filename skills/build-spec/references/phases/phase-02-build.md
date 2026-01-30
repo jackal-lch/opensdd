@@ -239,23 +239,51 @@ FOR package_id IN build_order:
             - fix_hints = probe's fix_hints (for next build)
 
     # ═══════════════════════════════════════════════
-    # STEP C: UPDATE PACKAGE FILE
+    # STEP C: RECORD RESULTS TO PACKAGE FILE
     # ═══════════════════════════════════════════════
 
     13. If status still PENDING after loop: status = BLOCKED
 
-    14. Append build history to package YAML:
+    14. **MANDATORY: RECORD BUILD RESULTS TO PACKAGE FILE**
 
-        Read current package file, append:
+        This step is REQUIRED. You MUST use the Edit tool to append
+        build results to the package YAML file.
+
+        ACTION: Read .opensdd/packages/{package_id}.yaml, then use Edit
+        to append the following YAML block at the end of the file:
+
         ```yaml
-        # ... existing package content ...
 
+        # ═══════════════════════════════════════════════════════════════
+        # BUILD RESULTS (recorded by build-spec)
+        # ═══════════════════════════════════════════════════════════════
         builds:
-          final_status: {GREEN|BLOCKED}
-          attempts: {attempt count}
+          final_status: {GREEN|YELLOW|BLOCKED}
+          attempts: {number of attempts}
+          completed_at: "{ISO timestamp}"
           history:
-            {build_history}
+            - attempt: 1
+              timestamp: "{ISO timestamp}"
+              build_status: SUCCESS | BLOCKED
+              probe_result:
+                classification: GREEN | YELLOW | RED
+                indicators:
+                  passed: {N}
+                  failed: {N}
+                  total: {N}
+                scenarios:
+                  - name: "{scenario_name}"
+                    status: PASS | FAIL
+                probe_log: |
+                  {actual probe log output}
+              fix_hints: null | [{issue, suggestion}]
+            # Additional attempts if retried...
         ```
+
+        **DO NOT SKIP THIS STEP.** The build history is critical for:
+        - Traceability of what was tested
+        - Debugging failed builds
+        - Understanding what the probe actually observed
 
     15. Display progress:
         ```
@@ -294,9 +322,13 @@ Proceeding to compare-spec verification...
 
 <output>
 All packages processed with:
-- Build history recorded in each package file
-- Status for each package (GREEN or BLOCKED)
-- Fix hints for any BLOCKED packages
+- **Build history APPENDED to each package file** (builds: section)
+- Status for each package (GREEN, YELLOW, or BLOCKED)
+- Probe logs recorded showing actual test execution
+- Fix hints for any failed packages
+
+**Artifacts created:**
+- `.opensdd/packages/pkg-*.yaml` - Each file now has `builds:` section at end
 </output>
 
 <verify>
@@ -305,7 +337,18 @@ AI self-verification:
 | Step | Expected Output | Status |
 |------|-----------------|--------|
 | build_loop | All packages processed | ✓ / ✗ |
+| **results_recorded** | Each package file has `builds:` section appended | ✓ / ✗ |
 | build_summary | Summary displayed | ✓ / ✗ |
+
+**CRITICAL CHECK: Verify build results were recorded**
+
+For each package that was processed, confirm:
+```bash
+grep -l "^builds:" .opensdd/packages/pkg-*.yaml
+```
+
+If any package is missing the `builds:` section, you MUST go back and
+append it using the Edit tool. This is not optional.
 
 If any step failed → identify and resolve.
 If all passed → proceed to compare phase.
