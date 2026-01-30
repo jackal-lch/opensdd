@@ -281,14 +281,15 @@ For each package in order:
 │                              ↓                                  │
 │  ┌───────────────────────────────────────────────────────────┐ │
 │  │  PROBE-AGENT (Task: Sonnet, fresh context)                │ │
-│  │  - Writes call-and-log script (language-appropriate)      │ │
-│  │  - Runs script against built code                         │ │
-│  │  - Outputs raw execution log (no assertions)              │ │
-│  │  - Classifies: GREEN / YELLOW / RED                       │ │
+│  │  - Checks prerequisites (credentials, services)           │ │
+│  │  - If missing → BLOCKED (can't test)                      │ │
+│  │  - If present → Runs REAL integration tests               │ │
+│  │  - Classifies: GREEN / FAILED / BLOCKED                   │ │
 │  └───────────────────────────────────────────────────────────┘ │
 │                              ↓                                  │
 │                         GREEN? ────────────────→ Done ✓         │
-│                              ↓ (YELLOW/RED)                     │
+│                         BLOCKED? ──────────────→ Next pkg       │
+│                              ↓ (FAILED)                         │
 │  ┌───────────────────────────────────────────────────────────┐ │
 │  │  PROBE generates fix hints:                               │ │
 │  │  - What failed and why                                    │ │
@@ -308,7 +309,7 @@ For each package in order:
 │  PROBE-AGENT (Task: Sonnet, fresh context)                      │
 │                              ↓                                  │
 │                         GREEN? ────────────────→ Done ✓         │
-│                              ↓ (still failing)                  │
+│                              ↓ (FAILED)                         │
 │                    Generate new fix hints                       │
 │                              ↓                                  │
 └──────────────────────────────┼──────────────────────────────────┘
@@ -323,8 +324,8 @@ For each package in order:
 │  PROBE-AGENT (Task: Sonnet, fresh context)                      │
 │                              ↓                                  │
 │                         GREEN? ────────────────→ Done ✓         │
-│                              ↓ (still failing)                  │
-│                    Mark package as BLOCKED                      │
+│                              ↓ (FAILED after 3 attempts)        │
+│                    Mark package as FAILED                       │
 │                    Continue to next package                     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -334,13 +335,18 @@ For each package in order:
 - **Fresh context per attempt**: Every Task invocation starts clean
 - **Fix hints, not raw logs**: Probe provides structured feedback, not full log
 - **Max 3 attempts**: Initial build + 2 retries
-- **BLOCKED if exhausted**: After 3 attempts, mark BLOCKED and continue
-- **All results in package file**: Build history appended to package YAML
+- **FAILED if exhausted**: After 3 attempts, mark FAILED (needs human review)
+- **BLOCKED if can't test**: Missing prerequisites = BLOCKED immediately (no retry)
+- **All results in package file**: Probe results appended to package YAML
 
-**Probe Log Classification:**
-- **GREEN**: All functions returned real values, no errors → Done
-- **YELLOW**: Some functions returned null/None, or warnings → Retry
-- **RED**: Import failed, init failed, errors, NotImplementedError → Retry
+**Three Statuses Only:**
+- **GREEN**: All REAL tests passed → Done
+- **FAILED**: Tried with real stuff, didn't work → Retry (max 3), then human review
+- **BLOCKED**: Can't even try (missing prerequisites) → Move to next package
+
+**BLOCKED ≠ FAILED:**
+- BLOCKED = Missing info from spec/blueprint (no amount of retrying helps)
+- FAILED = Have everything, ran real tests, something broke (fix and retry)
 
 **After all packages complete:** Run compare and generate final report.
 
@@ -480,7 +486,7 @@ builds:
     probe_status: GREEN
 
 # Final status after all attempts
-final_status: GREEN | YELLOW | BLOCKED
+final_status: GREEN | FAILED | BLOCKED
 blocked_reason: null  # or "Failed after 3 attempts: {summary}"
 ```
 
@@ -567,7 +573,7 @@ total_packages: 12
 
 probe_summary:
   GREEN: 9
-  YELLOW: 2
+  FAILED: 2
   BLOCKED: 1
 
 packages:
@@ -576,9 +582,9 @@ packages:
     attempts: 1
 
   - id: pkg-02-user-service
-    final_status: YELLOW
-    attempts: 2
-    notes: "getUser returns None for non-existent user (may be intentional)"
+    final_status: FAILED
+    attempts: 3
+    notes: "getUser returns None for non-existent user - needs human review"
 
   - id: pkg-04-payment-service
     final_status: BLOCKED
@@ -631,9 +637,9 @@ action_items:
       action: "Fix return type to match spec"
 
   should_review:
-    - type: YELLOW
+    - type: FAILED
       package: pkg-02-user-service
-      action: "Verify getUser returning None is correct behavior"
+      action: "Review getUser returning None - fix implementation or update spec"
 
     - type: EXTRA_NEW
       item: legacy_import_users
