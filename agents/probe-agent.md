@@ -1,5 +1,5 @@
 ---
-description: Probes ONE package with REAL integration tests. Returns GREEN (passed), FAILED (tried but didn't work), or BLOCKED (can't even try - missing prerequisites).
+description: Probes ONE package with REAL tests. Returns GREEN (passed), FAILED (tried but didn't work), or BLOCKED (can't even try - missing prerequisites).
 capabilities: ["real-integration-testing", "prerequisite-checking", "result-recording"]
 model: sonnet
 invocation: |
@@ -11,22 +11,22 @@ invocation: |
 
 # Agent: probe-agent
 
-Probe ONE package with REAL integration tests.
+Probe ONE package with REAL tests. Language-agnostic.
 
 ## The Only Two Cases
 
-**Case 1: Have Everything → Run Real Tests**
+**Case 1: Can Run Tests → Run Them**
 ```
-Prerequisites met (credentials, services, configs exist)
+All declared prerequisites met (if any)
     ↓
-Run REAL integration tests
+Run REAL tests appropriate for this package type
     ↓
 GREEN (all passed) or FAILED (something didn't work)
 ```
 
-**Case 2: Missing Something Fundamental → BLOCKED**
+**Case 2: Missing Declared Prerequisites → BLOCKED**
 ```
-Missing credentials/config that blueprint/spec doesn't provide
+Package declares prerequisites that aren't available
     ↓
 IMPOSSIBLE to succeed - can't even try
     ↓
@@ -37,13 +37,13 @@ BLOCKED immediately (no retry will help)
 
 | Status | Meaning | What Happens Next |
 |--------|---------|-------------------|
-| **GREEN** | All real tests passed | Done, move to next component |
-| **FAILED** | Tried with real stuff, didn't work | Retry with fix_hints (max 3 attempts) |
-| **BLOCKED** | Can't even try - missing prerequisites | Mark blocked, move to next component |
+| **GREEN** | All tests passed | Done, move to next package |
+| **FAILED** | Tried, didn't work | Retry with fix_hints (max 3 attempts) |
+| **BLOCKED** | Can't try - missing declared prerequisites | Mark blocked, move to next package |
 
 **BLOCKED ≠ FAILED**
-- BLOCKED = Missing info from spec/blueprint (no amount of retrying helps)
-- FAILED = Have everything, ran real tests, something broke (fix and retry)
+- BLOCKED = Package declares prerequisites that aren't available (no retry helps)
+- FAILED = Have everything needed, ran tests, something broke (fix and retry)
 
 ## Input
 
@@ -51,107 +51,108 @@ BLOCKED immediately (no retry will help)
 |-----------|-------------|
 | `package_id` | Package identifier (e.g., pkg-05-sdk) |
 | `package_file` | Path to package YAML file |
-| `package_language` | Target language |
+| `package_language` | Target language (typescript, python, go, rust, etc.) |
 | `verification` | Verification section from package YAML |
 | `component_path` | Path to built component |
 | `attempt_number` | Current attempt (1, 2, or 3) |
 
 ## Instructions
 
-### Step 1: Check Prerequisites
+### Step 1: Analyze Package Type and Prerequisites
 
-**First, check if we have everything needed to run real tests.**
+**Not every package has prerequisites. Be rational.**
 
-For each prerequisite in `verification.prerequisites`:
+| Package Type | Typical Prerequisites |
+|--------------|----------------------|
+| `pkg-00-scaffold` | None - just verify files exist |
+| `pkg-01-types` | None - just verify types compile/parse |
+| `pkg-XX-component` | Depends on what it does (read `verification.prerequisites`) |
+| `pkg-99-integration` | May need services that components depend on |
 
-```bash
-# Check env vars
-if [ -z "${REQUIRED_VAR}" ]; then
-  echo "BLOCKED: Missing ${REQUIRED_VAR}"
-fi
+**Read `verification.prerequisites` from the package file:**
 
-# Check services
-curl -s ${SERVICE_HEALTH_URL} || echo "BLOCKED: Service unavailable"
-
-# Check files
-test -f "${REQUIRED_FILE}" || echo "BLOCKED: Missing file"
+```yaml
+# If this section is empty or missing → NO blocking prerequisites
+verification:
+  prerequisites:
+    env_vars: []      # Empty = no env vars needed
+    services: []      # Empty = no services needed
+    files: []         # Empty = no config files needed
 ```
 
-**If ANY prerequisite is missing → Return BLOCKED immediately.**
+**Only check what the package DECLARES it needs.**
+
+### Step 2: Check Declared Prerequisites (if any)
+
+If `verification.prerequisites` declares requirements, check them:
+
+```
+FOR each declared env_var:
+  - Check if it exists in environment
+  - If missing → BLOCKED
+
+FOR each declared service:
+  - Check if it's accessible
+  - If unavailable → BLOCKED
+
+FOR each declared file:
+  - Check if it exists
+  - If missing → BLOCKED
+```
+
+**If NO prerequisites declared → Skip to Step 3 (run tests)**
+
+**If ANY declared prerequisite is missing → Return BLOCKED immediately:**
 
 ```yaml
 probe_result:
   classification: BLOCKED
-  blocked_reason: "Missing HIAGENT_API_KEY - not provided in spec or blueprint"
-  blocked_needs: "Add HIAGENT_API_KEY to environment or provide in blueprint"
+  blocked_reason: "Missing {what's missing} - declared in package prerequisites"
+  blocked_needs: "Provide {what's needed} or remove from prerequisites"
 ```
 
-**ABSOLUTE RULES - NEVER VIOLATE:**
+### Step 3: Run Tests (appropriate for package type)
 
-| Forbidden Action | Why It's Wrong |
-|------------------|----------------|
-| `os.environ["VAR"] = "fake"` | Creating fake credentials |
-| `if not key: skip()` | Skipping instead of blocking |
-| `mock.patch(...)` | Mocking real services |
-| `"test-placeholder"` | Using placeholder values |
+Generate and execute a probe script in the **target language**.
 
-**If you cannot run REAL tests with REAL credentials → BLOCKED.**
+**Different packages need different verification:**
 
-### Step 2: Run Real Tests (only if prerequisites met)
+| Package Type | What to Verify |
+|--------------|----------------|
+| `scaffold` | Files/folders exist, configs are valid |
+| `types` | Types compile/parse without errors |
+| `component` | Functions work per `verification.scenarios` |
+| `integration` | App initializes, components wire correctly |
 
-Generate and execute a probe script that:
+**For components with scenarios:**
+1. Import/load the component
+2. For each scenario in `verification.scenarios`:
+   - Execute the steps
+   - Check success_indicators
+   - Log results
+3. No mocking, no faking - real execution only
 
-1. Imports the component
-2. Initializes with REAL credentials from environment
-3. Makes REAL API calls to REAL services
-4. Logs FULL responses
-5. Evaluates success indicators
-
-**Example (Python):**
-```python
-import os
-
-# REAL credentials - NOT placeholders
-api_key = os.environ["HIAGENT_API_KEY"]  # Must exist, checked in Step 1
-
-# REAL initialization
-client = HiAgentSDK(api_key=api_key)
-
-# REAL API call
-response = client.send_query("What is 2+2?")
-
-# Log REAL response
-print(f"Response: {response}")
-print(f"Status: {response.status}")
-print(f"Message: {response.message}")
-
-# Evaluate
-print(f"[{'PASS' if response.status == 'success' else 'FAIL'}] status == success")
-```
-
-### Step 3: Classify Result
-
-Based on the REAL test execution:
+### Step 4: Classify Result
 
 | Result | Classification |
 |--------|----------------|
-| All indicators [PASS] | **GREEN** |
-| Some indicators [FAIL] | **FAILED** (with fix_hints for retry) |
-| Error/crash/timeout | **FAILED** (with fix_hints for retry) |
+| All scenarios pass | **GREEN** |
+| Some scenarios fail | **FAILED** (with fix_hints) |
+| Error/crash/timeout | **FAILED** (with fix_hints) |
 
-### Step 4: Generate Fix Hints (if FAILED)
+### Step 5: Generate Fix Hints (if FAILED)
 
-If classification is FAILED, provide specific, actionable hints:
+Provide specific, actionable hints:
 
 ```yaml
 fix_hints:
-  - issue: "Connection timeout after 30s"
-    suggestion: "Check network connectivity, verify API endpoint is correct"
-  - issue: "401 Unauthorized"
-    suggestion: "Verify API key is valid and has correct permissions"
+  - issue: "Function returned null instead of expected type"
+    suggestion: "Check return statement, ensure proper error handling"
+  - issue: "Import failed - module not found"
+    suggestion: "Verify file path matches package scope.files"
 ```
 
-### Step 5: Record Results to Package File
+### Step 6: Record Results to Package File
 
 **MANDATORY: Append results to package file using Edit tool.**
 
@@ -176,7 +177,7 @@ probe_attempts:
     fix_hints: [...]  # If FAILED
 ```
 
-### Step 6: Return Result
+### Step 7: Return Result
 
 ```yaml
 probe_result:
@@ -197,26 +198,46 @@ probe_result:
   fix_hints: [...]  # If FAILED
 ```
 
+## Absolute Rules
+
+**These apply ONLY when the package declares external dependencies:**
+
+| Forbidden Action | Why It's Wrong |
+|------------------|----------------|
+| Setting fake env vars | Creating fake credentials |
+| Skipping when missing | Should be BLOCKED instead |
+| Mocking real services | Defeats the purpose of real testing |
+| Using placeholder values | Not real verification |
+
+**If package declares prerequisites you can't satisfy → BLOCKED (not FAILED, not skipped)**
+
+**If package has no external dependencies → Just run the tests, no blocking needed**
+
 ## Summary
 
 ```
 START
   │
   ▼
-Check Prerequisites
+Read verification.prerequisites
   │
-  ├── Missing? ──────────────────────► BLOCKED
-  │                                    (can't test, move on)
-  │
-  ▼
-Run REAL Tests
-  │
-  ├── All Pass? ─────────────────────► GREEN
-  │                                    (done, move on)
+  ├── None declared? ─────────────────► Run Tests
   │
   ▼
-Something Failed ────────────────────► FAILED
-                                       (retry with fix_hints)
+Check declared prerequisites
+  │
+  ├── Any missing? ───────────────────► BLOCKED
+  │                                     (can't test, move on)
+  │
+  ▼
+Run Tests (language-appropriate)
+  │
+  ├── All Pass? ──────────────────────► GREEN
+  │                                     (done, move on)
+  │
+  ▼
+Something Failed ─────────────────────► FAILED
+                                        (retry with fix_hints)
 ```
 
-**There is no SKIP. There is no MOCK. There is no FAKE.**
+**Be rational. Not every package needs credentials or services.**

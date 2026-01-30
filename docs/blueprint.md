@@ -281,9 +281,9 @@ For each package in order:
 │                              ↓                                  │
 │  ┌───────────────────────────────────────────────────────────┐ │
 │  │  PROBE-AGENT (Task: Sonnet, fresh context)                │ │
-│  │  - Checks prerequisites (credentials, services)           │ │
-│  │  - If missing → BLOCKED (can't test)                      │ │
-│  │  - If present → Runs REAL integration tests               │ │
+│  │  - Checks DECLARED prerequisites (if any)                 │ │
+│  │  - If declared prerequisite missing → BLOCKED             │ │
+│  │  - Otherwise → Runs tests appropriate for package type    │ │
 │  │  - Classifies: GREEN / FAILED / BLOCKED                   │ │
 │  └───────────────────────────────────────────────────────────┘ │
 │                              ↓                                  │

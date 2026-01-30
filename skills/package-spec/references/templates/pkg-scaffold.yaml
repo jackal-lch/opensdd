@@ -64,6 +64,9 @@ verification:
   # Scaffold verification: file/directory existence checks
   mode: filesystem  # Special mode for scaffold - no code execution
 
+  # No external prerequisites - just filesystem checks
+  prerequisites: {}
+
   scenarios:
     - name: "structure_exists"
       description: "Verify all directories and config files were created"

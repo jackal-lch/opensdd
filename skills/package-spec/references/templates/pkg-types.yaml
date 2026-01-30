@@ -55,6 +55,9 @@ verification:
   # Types verification: import test - can we import all types without errors?
   mode: import  # Special mode for types - just verify imports work
 
+  # No external prerequisites - just compile/import check
+  prerequisites: {}
+
   scenarios:
     - name: "types_importable"
       description: "Verify all types can be imported without errors"

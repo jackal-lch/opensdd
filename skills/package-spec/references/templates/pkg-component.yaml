@@ -74,22 +74,27 @@ instructions:
 
 verification:
   # ═══════════════════════════════════════════════════════════════════════════════
-  # PREREQUISITES: What must exist before probing
+  # PREREQUISITES: What must exist before probing (OPTIONAL - only if needed)
   # ═══════════════════════════════════════════════════════════════════════════════
+  # Not every component needs prerequisites!
+  # - Pure logic components: No prerequisites
+  # - Database components: May need DB connection
+  # - External API components: Need credentials
+  #
+  # If empty or omitted → No blocking prerequisites, just run tests
   prerequisites:
-    env_vars:
-      # List required environment variables
-      - name: "{ENV_VAR_NAME}"
-        purpose: "What this is used for"
-        example: "example_value"
-    services:
-      # External services that must be running/accessible
-      - name: "{service_name}"
-        check: "How to verify it's available"
-    files:
-      # Config files or credentials that must exist
-      - path: "{config_path}"
-        purpose: "What this file contains"
+    env_vars: []      # Only list if component needs external credentials
+    services: []      # Only list if component needs external services
+    files: []         # Only list if component needs config files
+  #
+  # Example for a component that DOES need prerequisites:
+  # prerequisites:
+  #   env_vars:
+  #     - name: "DATABASE_URL"
+  #       purpose: "Database connection string"
+  #   services:
+  #     - name: "PostgreSQL"
+  #       check: "pg_isready -h localhost"
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # SETUP: Steps to prepare before probing (run once)

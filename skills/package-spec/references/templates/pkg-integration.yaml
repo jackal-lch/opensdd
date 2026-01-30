@@ -51,16 +51,25 @@ instructions:
 
 verification:
   # Integration verification: app starts, components wire, health check passes
+  #
+  # Prerequisites depend on what components need:
+  # - If all components are pure logic: No prerequisites
+  # - If components use database: Need DB connection
+  # - If components use external APIs: Need those credentials
+  #
+  # Only declare what's actually needed!
   prerequisites:
-    env_vars:
-      # List environment variables needed for startup
-      - name: "{DATABASE_URL}"
-        purpose: "Database connection"
-        example: "postgresql://localhost:5432/app"
-    services:
-      # Services that must be running
-      - name: "Database"
-        check: "pg_isready or equivalent"
+    env_vars: []      # Only list if components need external credentials
+    services: []      # Only list if components need external services
+  #
+  # Example for an app that DOES need prerequisites:
+  # prerequisites:
+  #   env_vars:
+  #     - name: "DATABASE_URL"
+  #       purpose: "Database connection"
+  #   services:
+  #     - name: "PostgreSQL"
+  #       check: "pg_isready -h localhost"
 
   scenarios:
     - name: "app_initializes"

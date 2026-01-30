@@ -159,29 +159,46 @@ FOR package_id IN build_order:
 
              ## Instructions
 
-             1. CHECK PREREQUISITES:
-                - Are all required env vars set?
-                - Are all required services running?
-                - If ANY missing → Return BLOCKED immediately
+             1. ANALYZE PACKAGE TYPE:
+                - scaffold/types: Usually no external prerequisites
+                - component: Check verification.prerequisites (may be empty)
+                - integration: May need dependent services
 
-             2. If prerequisites met → RUN REAL TESTS:
-                - Use REAL credentials from environment
-                - Make REAL API calls
-                - Log FULL responses
-                - Evaluate success indicators
+             2. CHECK DECLARED PREREQUISITES (if any):
+                - Read verification.prerequisites from package
+                - If empty/missing → No blocking prerequisites, proceed to tests
+                - If declared → Check each one exists
+                - If ANY declared prerequisite missing → BLOCKED immediately
 
-             3. CLASSIFY:
-                - All [PASS] → GREEN
-                - Any [FAIL] → FAILED (with fix_hints)
+             3. RUN TESTS (appropriate for package type):
+                - scaffold: Verify files exist, configs valid
+                - types: Verify types compile/parse
+                - component: Execute verification.scenarios
+                - integration: Verify app initializes, components wire
+                - Use target language for probe script
+                - Log full output
 
-             ## ABSOLUTE RULES
+             4. CLASSIFY:
+                - All pass → GREEN
+                - Any fail → FAILED (with fix_hints)
 
-             ❌ NEVER set fake env vars: os.environ["X"] = "fake"
-             ❌ NEVER skip tests: if not key: skip()
-             ❌ NEVER mock: mock.patch(...)
-             ❌ NEVER use placeholders
+             ## RATIONAL PREREQUISITE CHECKING
 
-             If you can't run REAL tests → BLOCKED (not FAILED)
+             NOT every package needs env vars or services:
+             - pkg-00-scaffold: Just check files exist
+             - pkg-01-types: Just check types compile
+             - pkg-XX-component: Only if verification.prerequisites declares them
+             - pkg-99-integration: Depends on what components need
+
+             ## ABSOLUTE RULES (for declared external dependencies)
+
+             If package DECLARES prerequisites you can't satisfy:
+             ❌ NEVER set fake credentials
+             ❌ NEVER skip the check
+             ❌ NEVER mock the service
+             → Return BLOCKED instead
+
+             If package has NO declared prerequisites → Just run the tests
 
              ## Output Format
 
@@ -191,8 +208,8 @@ FOR package_id IN build_order:
                classification: GREEN | FAILED | BLOCKED
 
                # If BLOCKED:
-               blocked_reason: "Missing HIAGENT_API_KEY"
-               blocked_needs: "Set env var or add to blueprint"
+               blocked_reason: "Missing {declared prerequisite}"
+               blocked_needs: "Provide it or remove from prerequisites"
 
                # If GREEN or FAILED:
                indicators:
