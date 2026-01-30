@@ -124,7 +124,7 @@ FOR package_id IN build_order:
         # ═══════════════════════════════════════════════
 
         6. Extract from package YAML:
-           - `verification` section (safe_to_call, do_not_call, criteria)
+           - `verification` section (prerequisites, scenarios, do_not_call)
            - `package.language` for probe script generation
 
         7. Derive component_path for probe:
@@ -137,7 +137,7 @@ FOR package_id IN build_order:
              model: "sonnet",
              subagent_type: "general-purpose",
              prompt: """
-             You are the probe-agent. Probe ONE package by calling functions and logging output.
+             You are the probe-agent. Probe ONE package with REAL integration tests.
 
              ## Package Info
              - package_id: {package_id}
@@ -149,48 +149,71 @@ FOR package_id IN build_order:
 
              ## Instructions
 
-             1. Parse the verification section:
-                - safe_to_call: Functions to call with their inputs
-                - do_not_call: Functions to avoid (side effects)
-                - criteria: What to look for (informational)
+             1. CHECK PREREQUISITES first:
+                - Verify all env_vars are set
+                - Verify all services are accessible
+                - Verify all required files exist
+                - If any missing: check `on_missing_prerequisites`:
+                  - BLOCK: Return RED immediately
+                  - SKIP: Return YELLOW with note
 
-             2. Generate a call-and-log script in {language}
+             2. RUN SETUP if specified:
+                - Execute each setup step
+                - Log results
 
-             3. Run the script
+             3. EXECUTE SCENARIOS:
+                For each scenario in verification.scenarios:
+                - Log scenario name and description
+                - For each step:
+                  - If action == "call": call function with REAL inputs
+                  - Log FULL output (not just type)
+                  - Log response time
+                - For each success_indicator:
+                  - Evaluate and log [PASS] or [FAIL]
 
-             4. Analyze the output and classify:
-                - GREEN: All functions executed, output looks correct
-                - YELLOW: Functions executed but output unexpected
-                - RED: Import failed, functions crashed, or major issues
+             4. CLASSIFY based on success indicators:
+                - GREEN: ALL indicators show [PASS]
+                - YELLOW: SOME indicators passed
+                - RED: Prerequisites missing, connection failed, majority failed
 
              5. If not GREEN, generate fix_hints:
-                - Specific, actionable feedback
-                - Reference actual error messages
-                - Suggest what the builder should fix
+                - Reference specific failed indicators
+                - Include actual error messages
+                - Suggest concrete fixes
 
              ## Output Format
-
-             Return result as YAML:
 
              ```yaml
              probe_result:
                package_id: {package_id}
                classification: GREEN | YELLOW | RED
 
+               indicators:
+                 passed: N
+                 failed: N
+                 total: N
+
+               scenarios:
+                 - name: "scenario_name"
+                   status: PASS | FAIL
+                   indicators:
+                     - "[PASS] indicator description"
+                     - "[FAIL] indicator description"
+
                probe_log: |
-                 [Raw execution output here]
+                 [Full execution log with timestamps]
 
                fix_hints:  # Only if not GREEN
-                 - issue: "Function X returned null instead of User object"
-                   suggestion: "Check that createUser actually stores and returns the user"
-                 - issue: "Import failed with 'Cannot find module'"
-                   suggestion: "Verify export statement in index.ts"
+                 - issue: "What specifically failed"
+                   suggestion: "How to fix it"
              ```
 
              ## CRITICAL
 
-             - NO assertions - just log
-             - Call ONLY functions in safe_to_call
+             - Use REAL credentials from environment
+             - Make REAL API calls to REAL services
+             - Log FULL responses, not just types
+             - Classification based on concrete [PASS]/[FAIL] counts
              - NEVER call functions in do_not_call
              """
            )

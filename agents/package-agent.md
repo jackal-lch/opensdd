@@ -71,24 +71,79 @@ For each package, use the appropriate template from:
 
 ### Step 4: Define Probe Verification
 
-For each package, define:
+**CRITICAL: Verification must be CONCRETE and REAL, not abstract.**
+
+For each package, define verification that produces observable, real-world proof:
 
 ```yaml
 verification:
-  safe_to_call:
-    - name: functionName
-      inputs: { param: "test value" }
+  # What must exist before probing
+  prerequisites:
+    env_vars:
+      - name: HIAGENT_API_KEY
+        purpose: "Authenticate with HiAgent platform"
+        example: "sk-..."
+    services:
+      - name: "HiAgent Platform"
+        check: "curl -s https://api.hiagent.ai/health returns 200"
+
+  # Real integration scenarios with concrete outcomes
+  scenarios:
+    - name: "real_agent_query"
+      description: |
+        Connect to HiAgent platform using real credentials,
+        send an actual query, receive actual agent response.
+
+      steps:
+        - action: "call"
+          function: "sendQuery"
+          inputs:
+            query: "What is 2+2?"
+            agent_id: "test-agent-001"
+
+        - action: "verify"
+          expect: |
+            Response contains:
+            - agent_id matching input
+            - non-empty response_text
+            - status == "success"
+            - response_time < 30s
+
+      success_indicators:
+        - "Successfully authenticated with platform"
+        - "Query sent and response received"
+        - "Response text is coherent and relevant"
+        - "No connection timeouts or auth errors"
+
   do_not_call:
-    - sendEmail  # Side effects
-  criteria:
-    - "functionName returns object with id and name fields"
+    - function: "deleteAgent"
+      reason: "Destructive - removes agent permanently"
 ```
 
 **Key principles:**
-- List functions safe to call during probing
-- Provide safe test inputs
-- Describe expected output characteristics
-- List functions with side effects to avoid
+- **REAL connections**: Test actual external services, not mocks
+- **CONCRETE outcomes**: "response.status == 'success'" not "returns object"
+- **OBSERVABLE proof**: Log actual API responses, actual data
+- **Prerequisites first**: Specify what credentials/services are needed
+- **Success indicators**: What specifically proves it works?
+
+**BAD verification (too abstract):**
+```yaml
+criteria:
+  - "returns object with expected fields"
+  - "handles errors appropriately"
+```
+
+**GOOD verification (concrete and real):**
+```yaml
+scenarios:
+  - name: "connect_and_query"
+    success_indicators:
+      - "HTTP 200 from HiAgent API"
+      - "Response JSON contains agent_id and message"
+      - "Response.message is non-empty string"
+      - "Round-trip time < 5 seconds"
+```
 
 ### Step 5: Create Manifest
 

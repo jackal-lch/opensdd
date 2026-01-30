@@ -61,11 +61,31 @@ instructions:
     - "No placeholder dependencies"
 
 verification:
-  # Scaffold has no functions to call - verified by file existence
-  safe_to_call: []
-  do_not_call: []
+  # Scaffold verification: file/directory existence checks
+  mode: filesystem  # Special mode for scaffold - no code execution
 
-  criteria:
-    - "All directories exist"
-    - "Config files are valid and parseable"
-    - "Dependencies include required packages"
+  scenarios:
+    - name: "structure_exists"
+      description: "Verify all directories and config files were created"
+      steps:
+        - action: "check_exists"
+          paths:
+            - "{spec.structure.root}"
+            - "{project_config_file}"
+            - ".gitignore"
+      success_indicators:
+        - "All directories exist and are accessible"
+        - "Config files exist and are non-empty"
+        - "Config files are valid (parseable)"
+
+    - name: "dependencies_valid"
+      description: "Verify dependency manifest is complete"
+      steps:
+        - action: "parse_config"
+          file: "{project_config_file}"
+      success_indicators:
+        - "Dependency file parses without errors"
+        - "Required packages are listed"
+        - "Version constraints are valid"
+
+  do_not_call: []  # No functions to avoid - this is filesystem only

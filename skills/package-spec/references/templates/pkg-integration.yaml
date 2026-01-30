@@ -50,19 +50,49 @@ instructions:
     - "No skipped components"
 
 verification:
-  safe_to_call:
-    # List functions safe to call during probing
-    - name: "{app_factory_function}"
-      inputs: {}
-    - name: "{health_check_function}"
-      inputs: {}
+  # Integration verification: app starts, components wire, health check passes
+  prerequisites:
+    env_vars:
+      # List environment variables needed for startup
+      - name: "{DATABASE_URL}"
+        purpose: "Database connection"
+        example: "postgresql://localhost:5432/app"
+    services:
+      # Services that must be running
+      - name: "Database"
+        check: "pg_isready or equivalent"
+
+  scenarios:
+    - name: "app_initializes"
+      description: "Application factory creates app without errors, all components wire"
+      steps:
+        - action: "call"
+          function: "{app_factory_function}"
+          inputs: {}
+        - action: "verify"
+          expect: "Returns app instance without throwing"
+      success_indicators:
+        - "App factory returns without errors"
+        - "All component dependencies resolved"
+        - "No missing imports or undefined references"
+
+    - name: "health_check_passes"
+      description: "Health endpoint returns success status"
+      steps:
+        - action: "call"
+          function: "{health_check_function}"
+          inputs: {}
+        - action: "verify"
+          expect: "Returns status: 'healthy' or equivalent"
+      success_indicators:
+        - "Health check returns success status"
+        - "Database connection verified"
+        - "Response time < 1 second"
 
   do_not_call:
-    # List functions that block or have side effects
-    - "{server_start_function}"
-    - "{migration_function}"
+    - function: "{server_start_function}"
+      reason: "Blocks forever - starts HTTP listener"
+    - function: "{migration_function}"
+      reason: "Side effect - modifies database schema"
 
-  criteria:
-    - "Application initializes without errors"
-    - "All components are wired"
-    - "Health check returns success"
+  on_missing_prerequisites: BLOCK

@@ -73,21 +73,72 @@ instructions:
     - "No mocked external services"
 
 verification:
-  safe_to_call:
-    # List functions safe to call during probing
-    - name: "{function_name}"
-      inputs:
-        "{param_name}": "{test_value}"
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # PREREQUISITES: What must exist before probing
+  # ═══════════════════════════════════════════════════════════════════════════════
+  prerequisites:
+    env_vars:
+      # List required environment variables
+      - name: "{ENV_VAR_NAME}"
+        purpose: "What this is used for"
+        example: "example_value"
+    services:
+      # External services that must be running/accessible
+      - name: "{service_name}"
+        check: "How to verify it's available"
+    files:
+      # Config files or credentials that must exist
+      - path: "{config_path}"
+        purpose: "What this file contains"
 
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SETUP: Steps to prepare before probing (run once)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  setup:
+    - step: "Description of setup step"
+      command: "bash command or code to run"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SCENARIOS: Real integration tests with concrete expected outcomes
+  # ═══════════════════════════════════════════════════════════════════════════════
+  scenarios:
+    - name: "{scenario_name}"
+      description: |
+        What this scenario tests in plain language.
+        Example: "Connect to HiAgent platform and send a real query"
+
+      steps:
+        - action: "call"
+          function: "{function_name}"
+          inputs:
+            "{param}": "{real_value}"
+
+        - action: "verify"
+          expect: |
+            Concrete, observable outcome. NOT abstract.
+            BAD:  "returns object with fields"
+            GOOD: "returns response containing agent_id, response text is non-empty,
+                   response.status == 'success'"
+
+      success_indicators:
+        # Concrete things that PROVE it works
+        - "Response contains valid agent_id (UUID format)"
+        - "Response text is non-empty and relevant to query"
+        - "No timeout or connection errors"
+        - "Response time < 30 seconds"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # DO NOT CALL: Functions with dangerous side effects
+  # ═══════════════════════════════════════════════════════════════════════════════
   do_not_call:
-    # List functions with side effects
-    - "{function_with_side_effect}"
+    - function: "{function_name}"
+      reason: "Why it's dangerous (e.g., deletes data, sends emails, charges money)"
 
-  criteria:
-    # Describe expected probe output
-    - "{function_name} returns object with {expected_fields}"
-    - "Error cases return appropriate error types"
-    - "No NotImplementedError or placeholder responses"
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # FALLBACK: What to do if prerequisites aren't met
+  # ═══════════════════════════════════════════════════════════════════════════════
+  on_missing_prerequisites: BLOCK
+  # Options: BLOCK (stop build), SKIP (mark as skipped, continue), MOCK (use mocks)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BUILDS SECTION (appended by build-spec, not created by package-spec)

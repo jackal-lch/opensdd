@@ -41,11 +41,44 @@ Verify a built package by:
 ### Step 1: Parse Verification
 
 Extract from verification section:
-- `safe_to_call`: Functions to call with their inputs
-- `do_not_call`: Functions to avoid (side effects)
-- `criteria`: What to look for in output (informational)
+- `prerequisites`: What must exist (env vars, services, files)
+- `setup`: Steps to prepare environment
+- `scenarios`: Real integration tests with expected outcomes
+- `do_not_call`: Functions to avoid
+- `on_missing_prerequisites`: BLOCK | SKIP | MOCK
 
-### Step 2: Verify Runtime Environment
+### Step 2: Check Prerequisites
+
+**Before any probing, verify all prerequisites are met.**
+
+**Check environment variables:**
+```bash
+# For each env_var in prerequisites.env_vars
+if [ -z "${ENV_VAR_NAME}" ]; then
+  echo "MISSING: ENV_VAR_NAME"
+fi
+```
+
+**Check services:**
+```bash
+# For each service in prerequisites.services
+# Run the check command specified
+curl -s https://api.example.com/health || echo "UNAVAILABLE: ServiceName"
+```
+
+**Check files:**
+```bash
+# For each file in prerequisites.files
+test -f "{path}" || echo "MISSING: {path}"
+```
+
+**If any prerequisite is missing:**
+- Check `on_missing_prerequisites` setting:
+  - `BLOCK`: Return RED immediately with fix_hints listing what's missing
+  - `SKIP`: Return YELLOW with note "skipped due to missing prerequisites"
+  - `MOCK`: Continue but use mocks (not recommended)
+
+### Step 3: Verify Runtime Environment
 
 Before generating the probe script, verify the required runtime is available.
 
@@ -70,31 +103,56 @@ Before generating the probe script, verify the required runtime is available.
 
 **If check passes:** Continue to Step 3.
 
-### Step 3: Generate Probe Script
+### Step 4: Run Setup (if specified)
 
-Generate a call-and-log script in the package language.
+If `verification.setup` exists, run each setup step:
+
+```bash
+# For each step in setup
+echo "SETUP: {step.description}"
+{step.command}
+```
+
+Log setup results. If setup fails, return RED with fix_hints.
+
+### Step 5: Generate Probe Script
+
+Generate a call-and-log script that executes **scenarios**, not just functions.
 
 **Script structure:**
 ```
 1. Log header with package ID and timestamp
 2. Import/load the component
 3. Log import result (success or failure)
-4. Initialize the component
+4. Initialize the component (with real config/credentials)
 5. Log initialization result
-6. For each safe_to_call function:
-   a. Log the function name
-   b. Log the input
-   c. Call the function
-   d. Log the output
-   e. Log the type
-   f. Log fields/attributes if object
-   g. Log any errors
-7. Log footer
+
+6. For each SCENARIO in verification.scenarios:
+   a. Log scenario name and description
+   b. For each step in scenario.steps:
+      - If action == "call":
+        * Log function name and inputs
+        * Call the function with REAL inputs
+        * Log the FULL output (not just type)
+        * Log response time
+      - If action == "verify":
+        * Check the expect conditions
+        * Log pass/fail for each condition
+   c. For each success_indicator:
+      * Evaluate and log: "[PASS]" or "[FAIL]" + indicator
+
+7. Log summary: passed/failed indicators
+8. Log footer
 ```
 
-### Step 4: Language Templates
+**CRITICAL: Use REAL data, not mocks.**
+- Real API calls to real services
+- Real credentials from environment
+- Real responses logged in full
 
-#### TypeScript
+### Step 6: Language Templates
+
+#### TypeScript (Scenario-based)
 ```typescript
 const log = (msg: string) => console.log(`[${new Date().toISOString()}] ${msg}`);
 
@@ -107,33 +165,62 @@ try {
   const { Component } = await import('{component_path}');
   log('  OK: Imported');
 
-  log('Initializing...');
-  const instance = new Component();
+  log('Initializing with real config...');
+  const instance = new Component({
+    apiKey: process.env.API_KEY,  // Real credentials
+    // ... other real config
+  });
   log('  OK: Created instance');
 
-  // For each safe_to_call
-  log('Calling {functionName}...');
-  log(`  Input: ${JSON.stringify({inputs})}`);
+  // ═══════════════════════════════════════════════
+  // SCENARIO: {scenario.name}
+  // ═══════════════════════════════════════════════
+  log('');
+  log('SCENARIO: {scenario.name}');
+  log('  {scenario.description}');
+  log('');
+
+  const startTime = Date.now();
   try {
-    const result = await instance.{functionName}({inputs});
-    log(`  Output: ${JSON.stringify(result)}`);
-    log(`  Type: ${typeof result}`);
-    if (result && typeof result === 'object') {
-      log(`  Fields: ${Object.keys(result).join(', ')}`);
-    }
+    // Call with REAL inputs
+    log('Calling {functionName}...');
+    log(`  Input: ${JSON.stringify({real_inputs})}`);
+
+    const result = await instance.{functionName}({real_inputs});
+    const elapsed = Date.now() - startTime;
+
+    // Log FULL response (not just type)
+    log(`  Output: ${JSON.stringify(result, null, 2)}`);
+    log(`  Response time: ${elapsed}ms`);
+
+    // Check success indicators
+    log('');
+    log('SUCCESS INDICATORS:');
+    // For each indicator, evaluate and log
+    log(`  [${result.status === 'success' ? 'PASS' : 'FAIL'}] status == 'success'`);
+    log(`  [${result.agent_id ? 'PASS' : 'FAIL'}] response contains agent_id`);
+    log(`  [${result.message?.length > 0 ? 'PASS' : 'FAIL'}] message is non-empty`);
+    log(`  [${elapsed < 30000 ? 'PASS' : 'FAIL'}] response time < 30s`);
+
   } catch (e) {
     log(`  ERROR: ${e}`);
+    log('  [FAIL] Scenario failed with error');
   }
+
 } catch (e) {
   log(`  IMPORT FAILED: ${e}`);
 }
 
+log('');
 log('='.repeat(60));
 log('PROBE COMPLETE');
 ```
 
-#### Python
+#### Python (Scenario-based)
 ```python
+import os
+import time
+import json
 from datetime import datetime
 
 def log(msg):
@@ -148,72 +235,55 @@ try:
     from {module_path} import {Component}
     log("  OK: Imported")
 
-    log("Initializing...")
-    instance = {Component}()
+    log("Initializing with real config...")
+    instance = {Component}(
+        api_key=os.environ.get("API_KEY"),  # Real credentials
+        # ... other real config
+    )
     log("  OK: Created instance")
 
-    # For each safe_to_call
-    log("Calling {function_name}...")
-    log(f"  Input: {inputs}")
+    # ═══════════════════════════════════════════════
+    # SCENARIO: {scenario.name}
+    # ═══════════════════════════════════════════════
+    log("")
+    log(f"SCENARIO: {scenario_name}")
+    log(f"  {scenario_description}")
+    log("")
+
+    start_time = time.time()
     try:
-        result = instance.{function_name}(**{inputs})
-        log(f"  Output: {repr(result)}")
-        log(f"  Type: {type(result).__name__}")
-        if hasattr(result, '__dict__'):
-            log(f"  Fields: {list(vars(result).keys())}")
+        # Call with REAL inputs
+        log(f"Calling {function_name}...")
+        log(f"  Input: {json.dumps(real_inputs)}")
+
+        result = instance.{function_name}(**real_inputs)
+        elapsed = (time.time() - start_time) * 1000
+
+        # Log FULL response
+        log(f"  Output: {json.dumps(result, indent=2, default=str)}")
+        log(f"  Response time: {elapsed:.0f}ms")
+
+        # Check success indicators
+        log("")
+        log("SUCCESS INDICATORS:")
+        log(f"  [{'PASS' if result.get('status') == 'success' else 'FAIL'}] status == 'success'")
+        log(f"  [{'PASS' if result.get('agent_id') else 'FAIL'}] response contains agent_id")
+        log(f"  [{'PASS' if len(result.get('message', '')) > 0 else 'FAIL'}] message is non-empty")
+        log(f"  [{'PASS' if elapsed < 30000 else 'FAIL'}] response time < 30s")
+
     except Exception as e:
         log(f"  ERROR: {type(e).__name__}: {e}")
+        log("  [FAIL] Scenario failed with error")
 
 except ImportError as e:
     log(f"  IMPORT FAILED: {e}")
 
+log("")
 log("=" * 60)
 log("PROBE COMPLETE")
 ```
 
-#### Go
-```go
-package main
-
-import (
-    "fmt"
-    "time"
-    "encoding/json"
-)
-
-func log(msg string) {
-    fmt.Printf("[%s] %s\n", time.Now().Format(time.RFC3339), msg)
-}
-
-func main() {
-    log("============================================================")
-    log("PROBE: {package_id}")
-    log("============================================================")
-
-    // Import and initialize (language-specific)
-    // Call functions and log results
-}
-```
-
-#### Rust
-```rust
-use chrono::Utc;
-
-fn log(msg: &str) {
-    println!("[{}] {}", Utc::now().to_rfc3339(), msg);
-}
-
-fn main() {
-    log("============================================================");
-    log("PROBE: {package_id}");
-    log("============================================================");
-
-    // Import and initialize (language-specific)
-    // Call functions and log results
-}
-```
-
-### Step 5: Run Script
+### Step 7: Run Script
 
 Execute the generated script:
 
@@ -237,17 +307,27 @@ go run .opensdd/probes/{package_id}_probe.go
 cargo run --bin probe_{package_id}
 ```
 
-### Step 6: Classify Result
+### Step 8: Classify Result
 
-Analyze the probe log and classify:
+Analyze the probe log and classify based on **success indicators**:
 
 | Classification | Criteria |
 |----------------|----------|
-| **GREEN** | All functions imported and executed successfully, output looks reasonable |
-| **YELLOW** | Functions executed but output unexpected (nulls, wrong types, missing fields) |
-| **RED** | Import failed, functions crashed, or critical errors |
+| **GREEN** | ALL success indicators show [PASS], real data received from real services |
+| **YELLOW** | SOME indicators passed, but others failed (partial success) |
+| **RED** | Import failed, connection failed, auth failed, or majority indicators failed |
 
-### Step 7: Generate Fix Hints (if not GREEN)
+**Classification is based on REAL outcomes:**
+- Did it actually connect to the external service?
+- Did it receive a real response?
+- Does the response contain expected data?
+- Was the response time acceptable?
+
+**NOT based on:**
+- "Looks reasonable" (too vague)
+- "Returns object" (not concrete enough)
+
+### Step 9: Generate Fix Hints (if not GREEN)
 
 If classification is YELLOW or RED, generate structured fix hints:
 
@@ -266,7 +346,7 @@ fix_hints:
     suggestion: "Verify the export statement in user_service.ts matches expected path"
 ```
 
-### Step 8: Return Result
+### Step 10: Return Result
 
 Return the complete probe result.
 
@@ -276,24 +356,58 @@ Return result as YAML:
 
 ```yaml
 probe_result:
-  package_id: pkg-02-user-service
+  package_id: pkg-05-sdk
   classification: GREEN | YELLOW | RED
+
+  # Summary of success indicators
+  indicators:
+    passed: 4
+    failed: 0
+    total: 4
+
+  scenarios:
+    - name: "real_agent_query"
+      status: PASS
+      indicators:
+        - "[PASS] Successfully authenticated with platform"
+        - "[PASS] Query sent and response received"
+        - "[PASS] Response contains valid agent_id"
+        - "[PASS] Response time < 30s (actual: 1.2s)"
 
   probe_log: |
     [2024-01-30T10:15:00.000Z] ============================================================
-    [2024-01-30T10:15:00.000Z] PROBE: pkg-02-user-service
+    [2024-01-30T10:15:00.000Z] PROBE: pkg-05-sdk
     [2024-01-30T10:15:00.000Z] ============================================================
-    [2024-01-30T10:15:00.001Z] Importing module...
+    [2024-01-30T10:15:00.001Z] Checking prerequisites...
+    [2024-01-30T10:15:00.002Z]   HIAGENT_API_KEY: present
+    [2024-01-30T10:15:00.003Z]   HiAgent API health: OK
+    [2024-01-30T10:15:00.050Z] Importing module...
     [2024-01-30T10:15:00.050Z]   OK: Imported
-    [2024-01-30T10:15:00.051Z] Initializing...
-    [2024-01-30T10:15:00.055Z]   OK: Created instance
-    [2024-01-30T10:15:00.056Z] Calling createUser...
-    [2024-01-30T10:15:00.056Z]   Input: {"email": "test@example.com", "name": "Test"}
-    [2024-01-30T10:15:00.100Z]   Output: {"id": "abc-123", "email": "test@example.com", "name": "Test"}
-    [2024-01-30T10:15:00.100Z]   Type: object
-    [2024-01-30T10:15:00.100Z]   Fields: id, email, name, createdAt
-    [2024-01-30T10:15:00.101Z] ============================================================
-    [2024-01-30T10:15:00.101Z] PROBE COMPLETE
+    [2024-01-30T10:15:00.051Z] Initializing with real credentials...
+    [2024-01-30T10:15:00.055Z]   OK: SDK client created
+    [2024-01-30T10:15:00.056Z]
+    [2024-01-30T10:15:00.056Z] SCENARIO: real_agent_query
+    [2024-01-30T10:15:00.056Z]   Connect to HiAgent and send real query
+    [2024-01-30T10:15:00.056Z]
+    [2024-01-30T10:15:00.057Z] Calling sendQuery...
+    [2024-01-30T10:15:00.057Z]   Input: {"query": "What is 2+2?", "agent_id": "test-agent"}
+    [2024-01-30T10:15:01.250Z]   Output: {
+    [2024-01-30T10:15:01.250Z]     "status": "success",
+    [2024-01-30T10:15:01.250Z]     "agent_id": "test-agent",
+    [2024-01-30T10:15:01.250Z]     "message": "2+2 equals 4.",
+    [2024-01-30T10:15:01.250Z]     "response_time_ms": 1193
+    [2024-01-30T10:15:01.250Z]   }
+    [2024-01-30T10:15:01.251Z]   Response time: 1193ms
+    [2024-01-30T10:15:01.251Z]
+    [2024-01-30T10:15:01.251Z] SUCCESS INDICATORS:
+    [2024-01-30T10:15:01.251Z]   [PASS] status == 'success'
+    [2024-01-30T10:15:01.251Z]   [PASS] response contains agent_id
+    [2024-01-30T10:15:01.251Z]   [PASS] message is non-empty: "2+2 equals 4."
+    [2024-01-30T10:15:01.251Z]   [PASS] response time < 30s (1.2s)
+    [2024-01-30T10:15:01.252Z]
+    [2024-01-30T10:15:01.252Z] ============================================================
+    [2024-01-30T10:15:01.252Z] PROBE COMPLETE: 4/4 indicators passed
+    [2024-01-30T10:15:01.252Z] ============================================================
 
   # Only if not GREEN:
   fix_hints:

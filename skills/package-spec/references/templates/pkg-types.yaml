@@ -52,11 +52,21 @@ instructions:
     - "No 'any' or equivalent escape hatches"
 
 verification:
-  # Types have no functions to call - verified by import test
-  safe_to_call: []
-  do_not_call: []
+  # Types verification: import test - can we import all types without errors?
+  mode: import  # Special mode for types - just verify imports work
 
-  criteria:
-    - "All types from spec are defined"
-    - "Types are importable without errors"
-    - "Type names match spec exactly"
+  scenarios:
+    - name: "types_importable"
+      description: "Verify all types can be imported without errors"
+      steps:
+        - action: "import"
+          module: "{types_file_path}"
+          expect_exports:
+            - "{type_name}"  # List all expected type exports
+      success_indicators:
+        - "Module imports without syntax errors"
+        - "All type names from spec are exported"
+        - "No 'any' or undefined types"
+        - "Type checker passes (if applicable)"
+
+  do_not_call: []  # No functions - types only
