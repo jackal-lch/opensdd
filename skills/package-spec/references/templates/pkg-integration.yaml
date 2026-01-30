@@ -95,4 +95,5 @@ verification:
     - function: "{migration_function}"
       reason: "Side effect - modifies database schema"
 
-  on_missing_prerequisites: BLOCK
+  # ABSOLUTE RULE: If prerequisites aren't met → BLOCK
+  # There is NO other option. NEVER skip. NEVER mock. NEVER fake.

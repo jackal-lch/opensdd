@@ -135,10 +135,9 @@ verification:
       reason: "Why it's dangerous (e.g., deletes data, sends emails, charges money)"
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # FALLBACK: What to do if prerequisites aren't met
+  # ABSOLUTE RULE: If prerequisites aren't met → BLOCK
+  # There is NO other option. NEVER skip. NEVER mock. NEVER fake.
   # ═══════════════════════════════════════════════════════════════════════════════
-  on_missing_prerequisites: BLOCK
-  # Options: BLOCK (stop build), SKIP (mark as skipped, continue), MOCK (use mocks)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BUILDS SECTION (appended by build-spec, not created by package-spec)

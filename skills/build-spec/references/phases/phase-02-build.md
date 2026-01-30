@@ -137,7 +137,7 @@ FOR package_id IN build_order:
              model: "sonnet",
              subagent_type: "general-purpose",
              prompt: """
-             You are the probe-agent. Probe ONE package with REAL integration tests.
+             You are the probe-agent. Probe ONE package with REAL tests.
 
              ## Package Info
              - package_id: {package_id}
@@ -149,96 +149,85 @@ FOR package_id IN build_order:
              ## Verification Section
              {verification_yaml}
 
+             ## THREE STATUSES ONLY
+
+             | Status | Meaning |
+             |--------|---------|
+             | GREEN | All REAL tests passed |
+             | FAILED | Tried with real stuff, didn't work |
+             | BLOCKED | Can't test - missing prerequisites |
+
              ## Instructions
 
-             1. CHECK PREREQUISITES first:
-                - Verify all env_vars are set
-                - Verify all services are accessible
-                - Verify all required files exist
-                - If any missing: check `on_missing_prerequisites`:
-                  - BLOCK: Return RED immediately
-                  - SKIP: Return YELLOW with note
+             1. CHECK PREREQUISITES:
+                - Are all required env vars set?
+                - Are all required services running?
+                - If ANY missing → Return BLOCKED immediately
 
-             2. RUN SETUP if specified:
-                - Execute each setup step
-                - Log results
+             2. If prerequisites met → RUN REAL TESTS:
+                - Use REAL credentials from environment
+                - Make REAL API calls
+                - Log FULL responses
+                - Evaluate success indicators
 
-             3. EXECUTE SCENARIOS:
-                For each scenario in verification.scenarios:
-                - Log scenario name and description
-                - For each step:
-                  - If action == "call": call function with REAL inputs
-                  - Log FULL output (not just type)
-                  - Log response time
-                - For each success_indicator:
-                  - Evaluate and log [PASS] or [FAIL]
+             3. CLASSIFY:
+                - All [PASS] → GREEN
+                - Any [FAIL] → FAILED (with fix_hints)
 
-             4. CLASSIFY based on success indicators:
-                - GREEN: ALL indicators show [PASS]
-                - YELLOW: SOME indicators passed
-                - RED: Prerequisites missing, connection failed, majority failed
+             ## ABSOLUTE RULES
 
-             5. If not GREEN, generate fix_hints:
-                - Reference specific failed indicators
-                - Include actual error messages
-                - Suggest concrete fixes
+             ❌ NEVER set fake env vars: os.environ["X"] = "fake"
+             ❌ NEVER skip tests: if not key: skip()
+             ❌ NEVER mock: mock.patch(...)
+             ❌ NEVER use placeholders
+
+             If you can't run REAL tests → BLOCKED (not FAILED)
 
              ## Output Format
 
              ```yaml
              probe_result:
                package_id: {package_id}
-               classification: GREEN | YELLOW | RED
+               classification: GREEN | FAILED | BLOCKED
 
+               # If BLOCKED:
+               blocked_reason: "Missing HIAGENT_API_KEY"
+               blocked_needs: "Set env var or add to blueprint"
+
+               # If GREEN or FAILED:
                indicators:
                  passed: N
                  failed: N
-                 total: N
-
-               scenarios:
-                 - name: "scenario_name"
-                   status: PASS | FAIL
-                   indicators:
-                     - "[PASS] indicator description"
-                     - "[FAIL] indicator description"
-
                probe_log: |
-                 [Full execution log with timestamps]
-
-               fix_hints:  # Only if not GREEN
-                 - issue: "What specifically failed"
-                   suggestion: "How to fix it"
+                 [Full execution log]
+               fix_hints: [...]  # If FAILED
              ```
 
-             ## CRITICAL
-
-             - Use REAL credentials from environment
-             - Make REAL API calls to REAL services
-             - Log FULL responses, not just types
-             - Classification based on concrete [PASS]/[FAIL] counts
-             - NEVER call functions in do_not_call
+             ## MANDATORY: Record results to package file
+             After probing, use Edit tool to append results to {package_file}
              """
            )
 
         9. Parse probe result
 
-        10. Record attempt in build_history:
-           ```yaml
-           - attempt: {attempt}
-             build_status: {SUCCESS|BLOCKED}
-             probe_classification: {GREEN|YELLOW|RED}
-             probe_log: |
-               {log}
-             fix_hints: {hints or null}
-           ```
+        10. Handle result based on classification:
 
-        11. If classification == GREEN:
-            - status = GREEN
-            - BREAK loop
+            If BLOCKED:
+              - status = BLOCKED
+              - BREAK loop (no retry will help)
 
-        12. Else:
-            - attempt++
-            - fix_hints = probe's fix_hints (for next build)
+            If GREEN:
+              - status = GREEN
+              - BREAK loop (done)
+
+            If FAILED:
+              - If attempt < 3:
+                - attempt++
+                - fix_hints = probe's fix_hints
+                - CONTINUE loop (retry)
+              - Else:
+                - status = FAILED
+                - BREAK loop (max retries reached)
 
     # ═══════════════════════════════════════════════
     # STEP C: FINALIZE PACKAGE STATUS
@@ -267,14 +256,16 @@ After all packages processed, show interim summary.
 BUILD PHASE COMPLETE
 ═══════════════════════════════════════════════════════════════
 
-Packages built:
+Packages:
   ✓ pkg-01-types (GREEN, 1 attempt)
   ✓ pkg-02-user-service (GREEN, 2 attempts)
-  ✗ pkg-03-auth (BLOCKED, 3 attempts)
-  ✓ pkg-04-api (GREEN, 1 attempt)
+  ✗ pkg-03-auth (FAILED, 3 attempts) - needs human review
+  ⊘ pkg-04-sdk (BLOCKED) - missing HIAGENT_API_KEY
 
-GREEN: {count}
-BLOCKED: {count}
+Summary:
+  GREEN:   {count} (passed with real tests)
+  FAILED:  {count} (tried but failed after 3 attempts)
+  BLOCKED: {count} (can't test - missing prerequisites)
 
 Proceeding to compare-spec verification...
 ═══════════════════════════════════════════════════════════════
@@ -285,7 +276,7 @@ Proceeding to compare-spec verification...
 
 <output>
 All packages processed with:
-- Status for each package (GREEN, YELLOW, or BLOCKED)
+- Status for each package (GREEN, FAILED, or BLOCKED)
 - Probe results recorded by probe-agent to each package file (`probe_attempts:` section)
 - Fix hints for any failed packages
 
