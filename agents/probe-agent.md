@@ -32,9 +32,11 @@ Verify a built package by:
 | Parameter | Description |
 |-----------|-------------|
 | `package_id` | Package identifier (e.g., pkg-02-user-service) |
+| `package_file` | Path to package YAML (e.g., .opensdd/packages/pkg-02-user-service.yaml) |
 | `package_language` | Target language (typescript, python, go, rust) |
 | `verification` | Verification section from package YAML |
 | `component_path` | Path to built component |
+| `attempt_number` | Current attempt number (1, 2, or 3) |
 
 ## Instructions
 
@@ -346,9 +348,52 @@ fix_hints:
     suggestion: "Verify the export statement in user_service.ts matches expected path"
 ```
 
-### Step 10: Return Result
+### Step 10: Record Results to Package File
 
-Return the complete probe result.
+**MANDATORY: Append probe results to the package YAML file.**
+
+Use the Edit tool to append the probe results to `{package_file}`.
+
+**Action:**
+1. Read the current content of `{package_file}`
+2. Use Edit to append the following YAML block at the end:
+
+```yaml
+
+# ═══════════════════════════════════════════════════════════════
+# PROBE RESULT - Attempt {attempt_number}
+# Recorded by probe-agent at {ISO timestamp}
+# ═══════════════════════════════════════════════════════════════
+probe_attempts:
+  - attempt: {attempt_number}
+    timestamp: "{ISO timestamp}"
+    classification: {GREEN|YELLOW|RED}
+    indicators:
+      passed: {N}
+      failed: {N}
+      total: {N}
+    scenarios:
+      - name: "{scenario_name}"
+        status: {PASS|FAIL}
+        indicators:
+          - "[PASS|FAIL] {indicator description}"
+    probe_log: |
+      {full probe execution log}
+    fix_hints:  # null if GREEN
+      - issue: "{what failed}"
+        suggestion: "{how to fix}"
+```
+
+**If this is attempt 2 or 3**, append to existing `probe_attempts` array.
+
+**DO NOT SKIP THIS STEP.** Recording probe results is essential for:
+- Traceability of what was actually tested
+- Debugging failed builds
+- Evidence that real integration tests ran
+
+### Step 11: Return Result
+
+Return the complete probe result to the caller.
 
 ## Output
 

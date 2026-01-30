@@ -23,7 +23,7 @@ Build all packages into production-ready code with automated verification.
 - **BLOCK > FAKE**: Missing info = BLOCKED, never placeholder
 - **Fresh context per attempt**: Every Task invocation is clean
 - **Fix hints not raw logs**: Structured feedback for retry
-- **Record Everything**: Append `builds:` section to each package file with full probe logs
+- **Record Everything**: Probe-agent appends `probe_attempts:` to package file after each probe
 
 ## Start
 
