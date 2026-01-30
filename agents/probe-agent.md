@@ -188,7 +188,15 @@ fix_hints:
     suggestion: "Check return statement, ensure proper error handling"
   - issue: "Import failed - module not found"
     suggestion: "Verify file path matches package scope.files"
+  - issue: "Database connection failed - no DATABASE_URL"
+    suggestion: "Add DATABASE_URL to package prerequisites, or code is trying to use undeclared dependency"
+  - issue: "Hardcoded return detected - output same for different inputs"
+    suggestion: "Implement real logic instead of returning fixed values"
 ```
+
+**Important: If code needs something NOT declared in prerequisites:**
+- This is FAILED (not BLOCKED) because prerequisites were technically "met"
+- Fix hint should suggest: add the dependency to prerequisites, OR fix the code
 
 ### Step 6: Record Results to Package File
 
@@ -266,15 +274,26 @@ The probe must verify the code ACTUALLY WORKS, not just returns expected values.
 | In-memory when spec says DB | `self.data = {}`, `Map<string, User>()` | FAILED - wrong storage |
 | Type escape hatches | TS: `as any`, `// @ts-ignore`, Go: `interface{}` abuse | Suspicious |
 
-**How to detect - PRIMARY: Verify side effects**
-1. Create something → retrieve it → verify it exists
-2. Update something → retrieve it → verify it changed
-3. Delete something → retrieve it → verify it's gone
+**How to detect - depends on component type:**
 
-**SECONDARY: Check output variation (with judgment)**
-- Only suspicious if function SHOULD vary for different inputs
-- `healthCheck()` returning same "ok" is fine
-- `createUser(data)` returning same ID for different data is NOT fine
+| Component Type | How to Verify It Actually Works |
+|----------------|--------------------------------|
+| **CRUD/Data** | Create → Retrieve → Verify exists |
+| | Update → Retrieve → Verify changed |
+| | Delete → Retrieve → Verify gone |
+| **Calculation** | Call with known inputs → Verify output is correct |
+| | Call with DIFFERENT inputs → Verify outputs DIFFER |
+| | `tax(100, 0.1)` should return 10, not hardcoded value |
+| **External API** | If prerequisites met → Call should succeed with real response |
+| | If prerequisites NOT met → BLOCKED (not fake success) |
+| **Validation** | Valid input → Should pass |
+| | Invalid input → Should reject with proper error |
+
+**Key: Match verification to what the function DOES**
+- Data function? Verify data persists
+- Calculation? Verify math is correct
+- API wrapper? Verify real API called (or BLOCKED)
+- Validator? Verify both accept and reject paths
 
 ### Rule 3: Real Execution Only
 

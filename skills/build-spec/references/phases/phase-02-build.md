@@ -209,13 +209,17 @@ FOR package_id IN build_order:
              ❌ Wrong storage: in-memory when spec says database
              ❌ Type escapes: `as any`, `// @ts-ignore`, `interface{}` abuse
 
-             HOW TO DETECT - PRIMARY: VERIFY SIDE EFFECTS
-             - Create → Retrieve → Verify exists
-             - Update → Retrieve → Verify changed
-             - Delete → Retrieve → Verify gone
+             HOW TO DETECT - MATCH TO COMPONENT TYPE:
 
-             This is MORE RELIABLE than checking output variation.
-             A sophisticated fake can vary output but not do real work.
+             | Type | Verification |
+             |------|--------------|
+             | CRUD/Data | Create→Retrieve→Verify exists |
+             | Calculation | Known inputs → correct output |
+             | External API | Real call succeeds OR BLOCKED |
+             | Validation | Accept valid, reject invalid |
+
+             Key: Verify what the function ACTUALLY DOES.
+             A sophisticated fake can vary output but can't fake side effects.
 
              ### Rule 3: GREEN = Actually Works
              GREEN does NOT mean "returns something"
