@@ -96,14 +96,14 @@ Verify all `instructions.constraints` are satisfied:
 
 ### What Counts as FAKE (never do these):
 
-| Fake Pattern | Example | Why It's Wrong |
-|--------------|---------|----------------|
-| Placeholder body | `pass`, `return None`, `{}` | Does nothing |
-| TODO marker | `# TODO: implement`, `NotImplementedError` | Not implemented |
-| Hardcoded return | `return {"status": "success"}` | No real logic |
-| In-memory when spec says DB | `self.users = {}` | Wrong storage |
+| Fake Pattern | Examples by Language | Why It's Wrong |
+|--------------|---------------------|----------------|
+| Placeholder body | Python: `pass`, TS: `{}`, Go: `return nil, nil`, Rust: `()` | Does nothing |
+| TODO marker | Python: `NotImplementedError`, Rust: `todo!()`, Go: `panic("not impl")` | Not implemented |
+| Hardcoded return | `return {"status": "success"}` regardless of input | No real logic |
+| In-memory when spec says DB | `self.users = {}`, `Map<string, User>()` | Wrong storage |
 | Mocked external service | `return fake_api_response()` | Not real integration |
-| Skipped validation | `# skip validation for now` | Incomplete |
+| Type escape hatches | TS: `as any`, `// @ts-ignore`, Go: `interface{}` abuse | Bypasses type safety |
 | Magic test values | `if user_id == "test-123": return mock_user` | Test-only path |
 
 ### What to Do Instead:
@@ -115,10 +115,13 @@ Verify all `instructions.constraints` are satisfied:
 ### The Probe WILL Detect Fakes
 
 The probe-agent runs REAL tests and will:
-- Call functions with DIFFERENT inputs
-- Check if outputs actually DIFFER
-- Verify side effects happen
-- Detect hardcoded/placeholder returns
+- **Verify side effects** (create → retrieve → verify exists)
+- Check that data is actually persisted/retrieved
+- Detect placeholder patterns in responses
+- Log everything for human review
+
+A sophisticated fake might vary output by input, but it CAN'T fake side effects.
+If your code doesn't actually persist data, the probe will catch it.
 
 **If you fake it, the probe will catch it. Just report BLOCKED instead.**
 

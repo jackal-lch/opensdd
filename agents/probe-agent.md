@@ -136,23 +136,37 @@ Generate and execute a probe script in the **target language**.
 
 3. **DETECT FAKES during execution:**
 
+   **Primary technique: VERIFY SIDE EFFECTS**
+
+   The most reliable fake detection is verifying side effects actually happen:
+
    ```
-   # Fake detection technique 1: Vary inputs
-   result1 = function(input_a)
-   result2 = function(input_b)
-   # If result1 == result2 for different inputs → suspicious
+   # For data operations: verify persistence
+   create_result = createUser({name: "Test"})
+   retrieved = getUser(create_result.id)
+   # If retrieved is None or doesn't match → FAILED (not actually persisting)
 
-   # Fake detection technique 2: Check side effects
-   function(create_input)
-   retrieved = get_function(id)
-   # If retrieved is None or doesn't match → not actually persisting
+   # For state changes: verify state changed
+   initial_count = getCount()
+   performAction()
+   final_count = getCount()
+   # If count didn't change when it should → FAILED
+   ```
 
-   # Fake detection technique 3: Look for placeholder patterns
+   **Secondary techniques (use with judgment):**
+
+   ```
+   # Technique: Check for placeholder patterns in response
    # If response contains "TODO", "placeholder", "not implemented" → FAILED
+   # Language-specific: NotImplementedError (Python), todo!() (Rust),
+   #                    panic("not implemented") (Go)
 
-   # Fake detection technique 4: Verify response structure
-   # If response is always identical structure with no variation → suspicious
+   # Technique: Vary inputs (when applicable)
+   # NOTE: Some functions legitimately return same output (healthCheck, getVersion)
+   # Only suspicious if function SHOULD produce different outputs for different inputs
    ```
+
+   **Key principle: Verify the ACTUAL WORK happened, not just the return value**
 
 4. **Log everything for human review**
 
@@ -228,12 +242,13 @@ probe_result:
 
 ### Rule 1: NEVER Create Fakes to Pass
 
-| Forbidden Action | Why It's Wrong |
-|------------------|----------------|
-| Setting fake env vars | `os.environ["KEY"] = "fake"` creates fake credentials |
-| Skipping when missing | `if not key: skip()` hides the problem |
-| Mocking services | `mock.patch(...)` defeats real testing |
-| Placeholder values | `"test-placeholder"` is not real data |
+| Forbidden Action | Language Examples |
+|------------------|-------------------|
+| Setting fake env vars | Python: `os.environ["KEY"] = "fake"` |
+| | Node: `process.env.KEY = "fake"` |
+| Skipping when missing | `if not key: skip()`, `if (!key) return` |
+| Mocking services | Python: `mock.patch(...)`, Jest: `jest.mock(...)` |
+| Placeholder values | `"test-placeholder"`, `"TODO"`, `"xxx"` |
 
 **If you can't satisfy declared prerequisites → BLOCKED**
 
@@ -243,19 +258,23 @@ The probe must verify the code ACTUALLY WORKS, not just returns expected values.
 
 **Signs of fake implementations to detect:**
 
-| Red Flag | Example | What to Do |
-|----------|---------|------------|
-| Hardcoded returns | `return {"status": "success"}` always | FAILED - not real logic |
-| Empty function bodies | `pass`, `return None`, `{}` | FAILED - no implementation |
-| TODO/NotImplemented | `raise NotImplementedError()` | FAILED - placeholder |
-| In-memory when spec says DB | `self.data = {}` instead of database | FAILED - wrong storage |
-| Skipped external calls | `# TODO: call API` | FAILED - not implemented |
+| Red Flag | Examples by Language | What to Do |
+|----------|---------------------|------------|
+| Hardcoded returns | `return {"status": "success"}` | FAILED - verify side effects |
+| Empty function bodies | Python: `pass`, TS: `{}`, Go: `return nil, nil`, Rust: `()` | FAILED |
+| TODO/NotImplemented | Python: `NotImplementedError`, Rust: `todo!()`, Go: `panic("not implemented")` | FAILED |
+| In-memory when spec says DB | `self.data = {}`, `Map<string, User>()` | FAILED - wrong storage |
+| Type escape hatches | TS: `as any`, `// @ts-ignore`, Go: `interface{}` abuse | Suspicious |
 
-**How to detect:**
-1. Call function with DIFFERENT inputs
-2. If output is ALWAYS the same → suspicious
-3. If function does nothing observable → suspicious
-4. Check that side effects actually happen (data persisted, events emitted)
+**How to detect - PRIMARY: Verify side effects**
+1. Create something → retrieve it → verify it exists
+2. Update something → retrieve it → verify it changed
+3. Delete something → retrieve it → verify it's gone
+
+**SECONDARY: Check output variation (with judgment)**
+- Only suspicious if function SHOULD vary for different inputs
+- `healthCheck()` returning same "ok" is fine
+- `createUser(data)` returning same ID for different data is NOT fine
 
 ### Rule 3: Real Execution Only
 

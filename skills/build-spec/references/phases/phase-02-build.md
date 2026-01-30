@@ -203,16 +203,19 @@ FOR package_id IN build_order:
              The build-agent might have created fake implementations.
              YOU MUST detect and FAIL them:
 
-             ❌ Hardcoded returns: `return {"status": "success"}` always
-             ❌ Empty bodies: `pass`, `return None`, `{}`
-             ❌ TODO placeholders: `raise NotImplementedError()`
-             ❌ Wrong storage: in-memory dict when spec says database
-             ❌ Skipped calls: `# TODO: call external API`
+             ❌ Hardcoded returns: `return {"status": "success"}`
+             ❌ Empty bodies: `pass`, `{}`, `return nil, nil`, `()`
+             ❌ TODO placeholders: `NotImplementedError`, `todo!()`, `panic("not impl")`
+             ❌ Wrong storage: in-memory when spec says database
+             ❌ Type escapes: `as any`, `// @ts-ignore`, `interface{}` abuse
 
-             HOW TO DETECT:
-             - Call with DIFFERENT inputs → output should DIFFER
-             - Check side effects actually happen
-             - Verify data is actually persisted/retrieved
+             HOW TO DETECT - PRIMARY: VERIFY SIDE EFFECTS
+             - Create → Retrieve → Verify exists
+             - Update → Retrieve → Verify changed
+             - Delete → Retrieve → Verify gone
+
+             This is MORE RELIABLE than checking output variation.
+             A sophisticated fake can vary output but not do real work.
 
              ### Rule 3: GREEN = Actually Works
              GREEN does NOT mean "returns something"
