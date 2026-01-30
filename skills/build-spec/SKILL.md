@@ -1,65 +1,31 @@
 ---
 name: build-spec
-description: Implement everything in spec.yaml to production-ready code. Use when you have .opensdd/spec.yaml and want to generate a complete, working codebase. Handles project scaffolding, component implementation, and spec alignment verification.
-user-invocable: true
+description: Builds all packages from package-spec into production-ready code. Use when you have `.opensdd/packages/manifest.yaml` and want to generate a complete, working codebase. Handles the full build loop (build → probe → retry) with automatic compare-spec verification at the end.
 ---
 
 # Build Spec
 
-Implement everything in spec.yaml to production-ready code.
-
-## Core Principle
-
-```
-spec.yaml -> production-ready codebase
-```
-
-Every component in spec.yaml gets implemented. compare-spec drives the workflow.
+Build all packages into production-ready code with automated verification.
 
 ## Phases
 
 | Phase | Name | Purpose |
 |-------|------|---------|
-| 0 | Initialize | Check prerequisites |
-| 1 | Scaffold | Create structure, types, run baseline /opensdd:compare |
-| 2 | Select | Pick next missing component from compare-result |
-| 3 | Implement | Implement selected component |
-| 4 | Verify | Run /opensdd:compare, fix drift if needed |
-| 5 | Review | Review extras with user confirmation |
+| 1 | Initialize | Verify prerequisites, load manifest, display build plan |
+| 2 | Build | Execute build→probe→retry loop for each package |
+| 3 | Compare | Run compare-spec against full codebase |
+| 4 | Summary | Generate unified build-summary.yaml and display results |
 
-## Flow
+## Key Principles
 
-```
-┌────────────┐   ┌──────────┐   ┌─────────────────────────────────────┐
-│ Initialize │──→│ Scaffold │──→│          Component Loop             │
-│  Phase 0   │   │ Phase 1  │   │                                     │
-└────────────┘   └──────────┘   │  SELECT ← from compare-result       │
-                                │    │                                │
-                                │    ↓                                │
-                                │  IMPLEMENT                          │
-                                │    │                                │
-                                │    ↓                                │
-                                │  VERIFY ← run /opensdd:compare         │
-                                │    │                                │
-                                │    ├─ drift → fix → re-verify       │
-                                │    ├─ match + more missing → SELECT │
-                                │    └─ all match → REVIEW            │
-                                └─────────────────────────────────────┘
-```
-
-## State
-
-No separate state file. **compare-result.yaml IS the state:**
-
-| Need | Where |
-|------|-------|
-| What's done? | `components[x].status == match` |
-| What's missing? | `components[x].status == missing` |
-| What needs fixing? | `components[x].status == drift` |
-| What extras? | `extras[]` |
+- **Builder ≠ Verifier**: Opus builds, Sonnet probes (different models, clean contexts)
+- **Probe, Don't Assert**: Call functions, log output, no assertions
+- **BLOCK > FAKE**: Missing info = BLOCKED, never placeholder
+- **Fresh context per attempt**: Every Task invocation is clean
+- **Fix hints not raw logs**: Structured feedback for retry
 
 ## Start
 
 <start>
-Load: `references/phases/phase-00-initialize.md`
+Load: `references/phases/phase-01-initialize.md`
 </start>

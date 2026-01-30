@@ -1,0 +1,62 @@
+# Package Template: Types
+# Creates all shared type definitions
+
+package:
+  id: pkg-01-types
+  type: types
+  language: "{spec.tech_stack.language}"
+  build_order: "01"
+  depends_on:
+    - pkg-00-scaffold
+
+scope:
+  description: "All shared type definitions from spec"
+
+  files:
+    - path: "{types_file_path}"
+      purpose: "Type definitions"
+
+  types_to_define:
+    # List all types from spec.types
+    - name: "{type_name}"
+      for: "{type_purpose}"
+      category: "{domain|input|output|error|event}"
+
+context:
+  types:
+    # Copy ALL from spec.types with purpose
+    "{type_name}":
+      for: "{type_purpose}"
+      used: ["{where_used}"]
+
+  conventions:
+    type_case: "{spec.conventions.type_case}"
+
+instructions:
+  purpose: |
+    Create all type definitions:
+    1. Define all types from spec.types
+    2. Types have PURPOSE (for), AI infers FIELDS
+    3. Group by category if appropriate
+    4. Include documentation
+
+  constraints:
+    - "Use exact type names from spec"
+    - "Follow spec.conventions.type_case"
+    - "All types must be exportable/public"
+
+  on_missing_info: BLOCK
+
+  never_fake:
+    - "No empty type stubs"
+    - "No 'any' or equivalent escape hatches"
+
+verification:
+  # Types have no functions to call - verified by import test
+  safe_to_call: []
+  do_not_call: []
+
+  criteria:
+    - "All types from spec are defined"
+    - "Types are importable without errors"
+    - "Type names match spec exactly"

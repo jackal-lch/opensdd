@@ -1,0 +1,108 @@
+# Package Template: Component
+# Creates one component with full context
+
+package:
+  id: "pkg-{NN}-{component_name}"
+  type: component
+  language: "{spec.tech_stack.language}"
+  build_order: "{NN}"
+  depends_on:
+    - pkg-01-types
+    # Add consumed component package IDs
+
+scope:
+  description: "{component.for}"
+
+  component:
+    name: "{component_name}"
+    for: "{component.for}"
+    layer: "{component.layer}"
+
+  files:
+    - path: "{component_file_path}"
+      purpose: "Component implementation"
+
+context:
+  # Reference types needed by this component
+  types:
+    - ref: "spec.types.{type_name}"
+
+  # Reference consumed components
+  dependencies:
+    - ref: "spec.components.{consumed_component}"
+
+  # Relevant flows from blueprint
+  flows:
+    - name: "{flow_name}"
+      steps:
+        - "{relevant_step}"
+      edge_cases:
+        - "{error_condition}"
+
+  # External SDK/API (if any)
+  external: null
+  # external:
+  #   "{sdk_name}":
+  #     package: "{package_name}"
+  #     docs: "{url}"
+
+instructions:
+  purpose: |
+    Implement {component_name}:
+    - {component.for}
+
+    Functions to implement:
+    {list from component.provides}
+
+    Events to emit:
+    {list from component.emits}
+
+    Events to handle:
+    {list from component.subscribes}
+
+  constraints:
+    - "Inject dependencies, do not instantiate directly"
+    - "Use types from pkg-01-types"
+    - "Follow flows from context for business logic"
+
+  on_missing_info: BLOCK
+
+  never_fake:
+    - "No in-memory storage if spec says database"
+    - "No placeholder implementations"
+    - "No mocked external services"
+
+verification:
+  safe_to_call:
+    # List functions safe to call during probing
+    - name: "{function_name}"
+      inputs:
+        "{param_name}": "{test_value}"
+
+  do_not_call:
+    # List functions with side effects
+    - "{function_with_side_effect}"
+
+  criteria:
+    # Describe expected probe output
+    - "{function_name} returns object with {expected_fields}"
+    - "Error cases return appropriate error types"
+    - "No NotImplementedError or placeholder responses"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BUILDS SECTION (appended by build-spec, not created by package-spec)
+# ═══════════════════════════════════════════════════════════════════════════════
+# After build-spec runs, this section is appended to track build history:
+#
+# builds:
+#   final_status: GREEN | BLOCKED
+#   attempts: 1
+#   history:
+#     - attempt: 1
+#       build_status: SUCCESS
+#       probe_classification: GREEN
+#       probe_log: |
+#         [raw execution log]
+#       fix_hints: null
+#
+# This allows tracing every build attempt in a single file.

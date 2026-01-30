@@ -4,10 +4,8 @@
 # Referenced by:
 #   - skills/compare-spec/references/phases/phase-01-compare.md (producer)
 #   - agents/compare-spec-agent.md (producer)
-#   - skills/build-spec/references/phases/phase-01-scaffold.md (consumer)
-#   - skills/build-spec/references/phases/phase-02-select.md (consumer)
-#   - skills/build-spec/references/phases/phase-04-verify.md (consumer)
-#   - skills/build-spec/references/phases/phase-05-review.md (consumer)
+#   - skills/build-spec/references/phases/phase-03-compare.md (consumer)
+#   - skills/build-spec/references/phases/phase-04-summary.md (consumer)
 #
 # All producers and consumers must conform to this schema.
 
