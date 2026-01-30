@@ -92,17 +92,35 @@ Verify all `instructions.constraints` are satisfied:
 
 ## CRITICAL: BLOCK > FAKE
 
-**If ANY information is missing:**
-- DO NOT use placeholder implementations
-- DO NOT use in-memory storage if spec says database
-- DO NOT mock external services
-- DO NOT use `pass`, `NotImplementedError`, `TODO`
-- DO NOT write empty function bodies
+**If ANY information is missing, report BLOCKED. NEVER fake it.**
 
-**Instead:**
-- Report BLOCKED
-- Specify what information is missing
-- Specify what would unblock you
+### What Counts as FAKE (never do these):
+
+| Fake Pattern | Example | Why It's Wrong |
+|--------------|---------|----------------|
+| Placeholder body | `pass`, `return None`, `{}` | Does nothing |
+| TODO marker | `# TODO: implement`, `NotImplementedError` | Not implemented |
+| Hardcoded return | `return {"status": "success"}` | No real logic |
+| In-memory when spec says DB | `self.users = {}` | Wrong storage |
+| Mocked external service | `return fake_api_response()` | Not real integration |
+| Skipped validation | `# skip validation for now` | Incomplete |
+| Magic test values | `if user_id == "test-123": return mock_user` | Test-only path |
+
+### What to Do Instead:
+
+1. **Report BLOCKED** with specific reason
+2. **Specify what's missing** (schema, API docs, credentials info)
+3. **Specify what would unblock** (add to spec, provide config)
+
+### The Probe WILL Detect Fakes
+
+The probe-agent runs REAL tests and will:
+- Call functions with DIFFERENT inputs
+- Check if outputs actually DIFFER
+- Verify side effects happen
+- Detect hardcoded/placeholder returns
+
+**If you fake it, the probe will catch it. Just report BLOCKED instead.**
 
 ## Output
 

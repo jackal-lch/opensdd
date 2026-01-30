@@ -190,15 +190,33 @@ FOR package_id IN build_order:
              - pkg-XX-component: Only if verification.prerequisites declares them
              - pkg-99-integration: Depends on what components need
 
-             ## ABSOLUTE RULES (for declared external dependencies)
+             ## ABSOLUTE RULES (ALWAYS APPLY)
 
-             If package DECLARES prerequisites you can't satisfy:
-             ❌ NEVER set fake credentials
-             ❌ NEVER skip the check
-             ❌ NEVER mock the service
-             → Return BLOCKED instead
+             ### Rule 1: NEVER Create Fakes to Pass
+             ❌ NEVER set fake env vars: `os.environ["X"] = "fake"`
+             ❌ NEVER skip checks: `if not key: skip()`
+             ❌ NEVER mock services: `mock.patch(...)`
+             ❌ NEVER use placeholders: `"test-value"`
+             → If prerequisites missing → BLOCKED
 
-             If package has NO declared prerequisites → Just run the tests
+             ### Rule 2: DETECT Fakes in Built Code
+             The build-agent might have created fake implementations.
+             YOU MUST detect and FAIL them:
+
+             ❌ Hardcoded returns: `return {"status": "success"}` always
+             ❌ Empty bodies: `pass`, `return None`, `{}`
+             ❌ TODO placeholders: `raise NotImplementedError()`
+             ❌ Wrong storage: in-memory dict when spec says database
+             ❌ Skipped calls: `# TODO: call external API`
+
+             HOW TO DETECT:
+             - Call with DIFFERENT inputs → output should DIFFER
+             - Check side effects actually happen
+             - Verify data is actually persisted/retrieved
+
+             ### Rule 3: GREEN = Actually Works
+             GREEN does NOT mean "returns something"
+             GREEN means "the code actually does what it's supposed to do"
 
              ## Output Format
 

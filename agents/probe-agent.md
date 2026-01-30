@@ -125,12 +125,36 @@ Generate and execute a probe script in the **target language**.
 | `integration` | App initializes, components wire correctly |
 
 **For components with scenarios:**
-1. Import/load the component
-2. For each scenario in `verification.scenarios`:
-   - Execute the steps
+
+1. **Import/load the component**
+   - If import fails → FAILED (not BLOCKED)
+
+2. **For each scenario in `verification.scenarios`:**
+   - Execute the steps with REAL inputs
+   - Log FULL output (not just pass/fail)
    - Check success_indicators
-   - Log results
-3. No mocking, no faking - real execution only
+
+3. **DETECT FAKES during execution:**
+
+   ```
+   # Fake detection technique 1: Vary inputs
+   result1 = function(input_a)
+   result2 = function(input_b)
+   # If result1 == result2 for different inputs → suspicious
+
+   # Fake detection technique 2: Check side effects
+   function(create_input)
+   retrieved = get_function(id)
+   # If retrieved is None or doesn't match → not actually persisting
+
+   # Fake detection technique 3: Look for placeholder patterns
+   # If response contains "TODO", "placeholder", "not implemented" → FAILED
+
+   # Fake detection technique 4: Verify response structure
+   # If response is always identical structure with no variation → suspicious
+   ```
+
+4. **Log everything for human review**
 
 ### Step 4: Classify Result
 
@@ -200,18 +224,47 @@ probe_result:
 
 ## Absolute Rules
 
-**These apply ONLY when the package declares external dependencies:**
+**These rules apply ALWAYS - for ALL packages, ALL tests:**
+
+### Rule 1: NEVER Create Fakes to Pass
 
 | Forbidden Action | Why It's Wrong |
 |------------------|----------------|
-| Setting fake env vars | Creating fake credentials |
-| Skipping when missing | Should be BLOCKED instead |
-| Mocking real services | Defeats the purpose of real testing |
-| Using placeholder values | Not real verification |
+| Setting fake env vars | `os.environ["KEY"] = "fake"` creates fake credentials |
+| Skipping when missing | `if not key: skip()` hides the problem |
+| Mocking services | `mock.patch(...)` defeats real testing |
+| Placeholder values | `"test-placeholder"` is not real data |
 
-**If package declares prerequisites you can't satisfy → BLOCKED (not FAILED, not skipped)**
+**If you can't satisfy declared prerequisites → BLOCKED**
 
-**If package has no external dependencies → Just run the tests, no blocking needed**
+### Rule 2: DETECT Fakes in Built Code
+
+The probe must verify the code ACTUALLY WORKS, not just returns expected values.
+
+**Signs of fake implementations to detect:**
+
+| Red Flag | Example | What to Do |
+|----------|---------|------------|
+| Hardcoded returns | `return {"status": "success"}` always | FAILED - not real logic |
+| Empty function bodies | `pass`, `return None`, `{}` | FAILED - no implementation |
+| TODO/NotImplemented | `raise NotImplementedError()` | FAILED - placeholder |
+| In-memory when spec says DB | `self.data = {}` instead of database | FAILED - wrong storage |
+| Skipped external calls | `# TODO: call API` | FAILED - not implemented |
+
+**How to detect:**
+1. Call function with DIFFERENT inputs
+2. If output is ALWAYS the same → suspicious
+3. If function does nothing observable → suspicious
+4. Check that side effects actually happen (data persisted, events emitted)
+
+### Rule 3: Real Execution Only
+
+- Call the ACTUAL code that was built
+- Use REAL inputs (from verification.scenarios)
+- Observe REAL outputs (log everything)
+- Verify REAL side effects (if applicable)
+
+**GREEN means: The code actually works, not just "returns something"**
 
 ## Summary
 
