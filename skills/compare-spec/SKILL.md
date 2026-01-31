@@ -1,6 +1,6 @@
 ---
 name: compare-spec
-description: Compare entire codebase against spec.yaml and report differences (matches, drifts, missing, extras). Use when checking code-spec alignment before changes, after spec modifications, or as diagnostic. Also used automatically by build-spec after builds complete.
+description: Compare entire codebase against spec.yaml and report differences (matches, drifts, missing, extras). Use when checking code-spec alignment before changes, after spec modifications, after build-spec completes, or as diagnostic.
 user-invocable: true
 ---
 
@@ -28,17 +28,16 @@ Run `/opensdd:compare-spec` to check alignment anytime:
 - As diagnostic: "Is my code aligned with spec?"
 - In CI/CD: Validate code-spec alignment
 
-### Integrated (Part of Build Flow)
+### After Build
 
-Also invoked automatically by `build-spec` after all packages are built:
-1. build-spec builds all packages
-2. build-spec probes each package
-3. **build-spec runs compare-spec** to verify overall alignment
-4. Results merged into unified build-summary.yaml
+Run manually after `build-spec` completes to verify overall alignment:
+1. build-spec builds and probes all packages
+2. User runs `/opensdd:compare-spec` to check alignment
+3. Results saved to `.opensdd/compare.report.yaml`
 
 ## Output
 
-- `.opensdd/compare-result.yaml` - Full structured report
+- `.opensdd/compare.report.yaml` - Full structured report
 - Terminal summary - Quick overview of differences
 
 ## Start

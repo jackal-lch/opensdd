@@ -2,11 +2,6 @@
 description: Probes ONE package with REAL tests. Returns GREEN (passed), FAILED (tried but didn't work), or BLOCKED (can't even try - missing prerequisites).
 capabilities: ["real-integration-testing", "prerequisite-checking", "result-recording"]
 model: sonnet
-invocation: |
-  Task tool with:
-    subagent_type: "general-purpose"
-    model: "sonnet"
-    prompt: {see build-spec phase-02-build.md for full prompt}
 ---
 
 # Agent: probe-agent

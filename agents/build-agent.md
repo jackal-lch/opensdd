@@ -2,11 +2,6 @@
 description: Builds ONE package into production-ready implementation. Reads package + spec + existing code, writes implementation files. Accepts fix_hints from probe for retry attempts.
 capabilities: ["code-generation", "spec-following", "dependency-injection", "fix-hints-handling"]
 model: opus
-invocation: |
-  Task tool with:
-    subagent_type: "general-purpose"
-    model: "opus"
-    prompt: {see build-spec phase-02-build.md for full prompt}
 ---
 
 # Agent: build-agent

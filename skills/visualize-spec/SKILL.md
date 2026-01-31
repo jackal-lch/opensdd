@@ -19,7 +19,7 @@ Generate comprehensive Mermaid diagrams from `spec.yaml` to help users understan
 
 | File | Purpose |
 |------|---------|
-| `.opensdd/spec-visual.md` | Mermaid diagrams visualizing the spec |
+| `.opensdd/spec.visual.md` | Mermaid diagrams visualizing the spec |
 
 ## Diagrams Generated
 
@@ -59,7 +59,7 @@ Load `references/diagrams/mermaid-templates.md` and generate each diagram:
 
 ### Step 4: Write Output
 
-Write all diagrams to `.opensdd/spec-visual.md` with:
+Write all diagrams to `.opensdd/spec.visual.md` with:
 - Header with generation timestamp
 - Table of contents
 - Each diagram section with title and description

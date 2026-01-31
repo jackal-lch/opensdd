@@ -344,7 +344,7 @@ flowchart LR
 
 ## Output File Structure
 
-The generated `.opensdd/spec-visual.md` should follow this structure:
+The generated `.opensdd/spec.visual.md` should follow this structure:
 
 ```markdown
 # System Visualization

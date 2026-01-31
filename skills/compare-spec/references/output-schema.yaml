@@ -1,11 +1,10 @@
-# Schema for .opensdd/compare-result.yaml
+# Schema for .opensdd/compare.report.yaml
 # SINGLE SOURCE OF TRUTH for compare-spec output format.
 #
 # Referenced by:
 #   - skills/compare-spec/references/phases/phase-01-compare.md (producer)
 #   - agents/compare-spec-agent.md (producer)
-#   - skills/build-spec/references/phases/phase-03-compare.md (consumer)
-#   - skills/build-spec/references/phases/phase-04-summary.md (consumer)
+#   - skills/fix-spec/references/phases/phase-01-initialize.md (consumer)
 #
 # All producers and consumers must conform to this schema.
 

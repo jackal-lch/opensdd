@@ -218,7 +218,7 @@ The spec defines **contracts and boundaries** that code must satisfy.
 |---|---|
 | **Skill** | `/opensdd:visualize-spec` |
 | **Input** | `.opensdd/spec.yaml` |
-| **Output** | `.opensdd/spec-visual.md` |
+| **Output** | `.opensdd/spec.visual.md` |
 
 Generate Mermaid diagrams to understand system design at a glance:
 - Architecture overview (components by layer)
@@ -348,28 +348,9 @@ For each package in order:
 - BLOCKED = Missing info from spec/blueprint (no amount of retrying helps)
 - FAILED = Have everything, ran real tests, something broke (fix and retry)
 
-**After all packages complete:** Run compare and generate final report.
+**After all packages complete:** Build shows summary of GREEN/BLOCKED packages.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  POST-BUILD: COMPARE PHASE (automatic)                          │
-│                                                                 │
-│  1. Run spec-extract on entire codebase                         │
-│     → Extract all function signatures, types                    │
-│                                                                 │
-│  2. Run compare-spec-agent                                      │
-│     → Compare extracted vs spec.yaml                            │
-│     → Identify: matches, drifts, missing, extras                │
-│                                                                 │
-│  3. Generate unified build-summary.yaml                         │
-│     → Probe results (per package)                               │
-│     → Compare results (overall)                                 │
-│     → Action items for human review                             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Build complete. Human reviews final report and decides next steps.**
+To verify overall code-spec alignment, run `/opensdd:compare-spec` manually.
 
 ### Phase 5: Compare (Standalone)
 
@@ -556,108 +537,15 @@ These fix hints (not the raw log) are passed to the retry builder.
 
 ---
 
-## Build Summary Format
+## Build Results
 
-The unified build summary combines probe results (runtime) and compare results (structural):
+After build-spec completes:
+- Package results are stored in each `pkg-*.yaml` file (probe_attempts section)
+- Terminal shows summary of GREEN/BLOCKED packages
 
-```yaml
-# .opensdd/results/build-summary.yaml
-
-generated: "2024-01-30T12:00:00Z"
-spec_file: .opensdd/spec.yaml
-total_packages: 12
-
-# ═══════════════════════════════════════════════════════════════════════════
-# PROBE RESULTS (Runtime Verification - per package)
-# ═══════════════════════════════════════════════════════════════════════════
-
-probe_summary:
-  GREEN: 9
-  FAILED: 2
-  BLOCKED: 1
-
-packages:
-  - id: pkg-00-scaffold
-    final_status: GREEN
-    attempts: 1
-
-  - id: pkg-02-user-service
-    final_status: FAILED
-    attempts: 3
-    notes: "getUser returns None for non-existent user - needs human review"
-
-  - id: pkg-04-payment-service
-    final_status: BLOCKED
-    attempts: 3
-    blocked_reason: "Stripe API credentials not configured"
-    blocked_needs: "Set STRIPE_API_KEY environment variable"
-
-# ═══════════════════════════════════════════════════════════════════════════
-# COMPARE RESULTS (Structural Verification - overall)
-# ═══════════════════════════════════════════════════════════════════════════
-
-compare_summary:
-  total_components: 8
-  matches: 6
-  drifts: 1
-  missing: 0
-  extras: 5
-
-drifts:
-  - component: UserService
-    function: updateUser
-    drift_type: return_type
-    spec_expects: "User | UserNotFound | ValidationError"
-    code_has: "User | None"
-    suggested_fix: "Add proper error types instead of returning None"
-
-missing: []
-
-extras:
-  - item: hash_password
-    classification: helper        # OK - used by spec functions
-    used_by: [AuthService.createUser]
-
-  - item: legacy_import_users
-    classification: new_functionality  # ⚠️ Needs evaluation
-    used_by: []
-
-# ═══════════════════════════════════════════════════════════════════════════
-# ACTION ITEMS (What needs human attention)
-# ═══════════════════════════════════════════════════════════════════════════
-
-action_items:
-  must_fix:
-    - type: BLOCKED
-      package: pkg-04-payment-service
-      action: "Configure Stripe credentials and re-run build"
-
-    - type: DRIFT
-      component: UserService.updateUser
-      action: "Fix return type to match spec"
-
-  should_review:
-    - type: FAILED
-      package: pkg-02-user-service
-      action: "Review getUser returning None - fix implementation or update spec"
-
-    - type: EXTRA_NEW
-      item: legacy_import_users
-      action: "Add to spec if intentional, or remove"
-
-# ═══════════════════════════════════════════════════════════════════════════
-# OVERALL STATUS
-# ═══════════════════════════════════════════════════════════════════════════
-
-overall_status: NEEDS_ATTENTION  # SUCCESS | PARTIAL_SUCCESS | NEEDS_ATTENTION | FAILED
-
-status_reason: |
-  - 1 package BLOCKED (payment-service)
-  - 1 structural drift (UserService.updateUser)
-  - 1 untracked new functionality (legacy_import_users)
-```
-
-**This is the single report humans review after build completes.**
+To verify overall code-spec alignment: run `/opensdd:compare-spec`
+- Generates `.opensdd/compare.report.yaml`
+- Shows matches, drifts, missing, extras
 
 ---
 
@@ -768,23 +656,26 @@ architecture:
 
 ### Agent Invocation Mechanism
 
-**CRITICAL**: Agents are invoked via the **Task tool** with explicit `model` parameter.
+**CRITICAL**: Agents are invoked via the **Task tool** with dedicated agent types.
 
 ```yaml
 # Build agent invocation
 Task:
-  subagent_type: "general-purpose"
-  model: "opus"                    # Opus for building
+  subagent_type: "opensdd:build-agent"
   description: "Build pkg-XX"
-  prompt: "{build-agent prompt}"
+  prompt: "{dynamic context: package content, fix hints}"
 
 # Probe agent invocation
 Task:
-  subagent_type: "general-purpose"
-  model: "sonnet"                  # Sonnet for probing (DIFFERENT model)
+  subagent_type: "opensdd:probe-agent"
   description: "Probe pkg-XX"
-  prompt: "{probe-agent prompt}"
+  prompt: "{dynamic context: package info, verification section}"
 ```
+
+Agent definitions in `agents/*.md` specify:
+- `description`: What the agent does (used by Claude Code)
+- `model`: Which model to use (opus for build, sonnet for probe)
+- Full instructions in markdown body
 
 This enforces:
 1. **Clean context**: Each agent starts fresh, no accumulated state
@@ -801,8 +692,8 @@ This enforces:
 | `.opensdd/spec.yaml` | Technical contracts (boundaries) |
 | `.opensdd/packages/manifest.yaml` | Package build order |
 | `.opensdd/packages/pkg-{NN}-{name}.yaml` | Package definition + build history + probe logs |
-| `.opensdd/results/build-summary.yaml` | Final build results summary |
-| `.opensdd/compare-result.yaml` | Code-spec comparison report |
+| `.opensdd/compare.report.yaml` | Code-spec comparison report |
+| `.opensdd/fix.report.yaml` | Fix audit trail |
 
 **Note:** Probe logs are stored in each package file (not separate files), enabling complete traceability per package.
 
@@ -836,9 +727,9 @@ We don't constrain AI with detailed instructions. We constrain it with clear str
 | Spec | Interactive (human reviews and approves) |
 | Package | Automatic (human can review output) |
 | Build | **Fully automatic** (retry loop, no human needed) |
-| Compare | Automatic (human reviews final report) |
+| Compare | Manual (run after build to check alignment) |
 
-**Human reviews the final report**, not intermediate probe logs. This enables:
+**Human reviews package results**, not intermediate probe logs. This enables:
 - Unattended builds (run overnight, review in morning)
 - Consistent process (no human variance in retry decisions)
 - Complete traceability (all attempts recorded in package files)

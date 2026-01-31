@@ -1,6 +1,11 @@
 ---
 name: build-spec
-description: Builds all packages from package-spec into production-ready code. Use when you have `.opensdd/packages/manifest.yaml` and want to generate a complete, working codebase. Handles the full build loop (build → probe → retry) with automatic compare-spec verification at the end.
+description: Builds all packages from package-spec into production-ready code. Use when you have `.opensdd/packages/manifest.yaml` and want to generate a complete, working codebase. Handles the full build loop (build → probe → retry).
+parameters:
+  review_mode:
+    type: boolean
+    default: false
+    description: When true, pause after each package for human review. When false (default), auto-continue to next package.
 ---
 
 # Build Spec
@@ -13,8 +18,15 @@ Build all packages into production-ready code with automated verification.
 |-------|------|---------|
 | 1 | Initialize | Verify prerequisites, load manifest, display build plan |
 | 2 | Build | Execute build→probe→retry loop for each package |
-| 3 | Compare | Run compare-spec against full codebase |
-| 4 | Summary | Generate unified build-summary.yaml and display results |
+
+After build completes, run `/opensdd:compare-spec` to verify overall code-spec alignment.
+
+## Usage
+
+```
+/opensdd:build-spec              # Auto-continue (default)
+/opensdd:build-spec --review     # Pause after each package for human review
+```
 
 ## Key Principles
 
@@ -28,5 +40,11 @@ Build all packages into production-ready code with automated verification.
 ## Start
 
 <start>
+**Parse arguments first:**
+- If args contains `--review` → set `review_mode = true`
+- Otherwise → set `review_mode = false` (default)
+
+Store `review_mode` for use in Phase 2.
+
 Load: `references/phases/phase-01-initialize.md`
 </start>

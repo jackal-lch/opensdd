@@ -63,7 +63,7 @@ Store these values for later steps.
 Remove old comparison artifacts to ensure fresh comparison.
 
 ```bash
-rm -rf .opensdd/extracted/ .opensdd/compare-result.yaml
+rm -rf .opensdd/extracted/ .opensdd/compare.report.yaml
 ```
 
 This ensures:
@@ -104,7 +104,7 @@ Store the agent's JSON result for the next step.
 </step>
 
 <step n="5" name="write_result">
-Write structured comparison result to `.opensdd/compare-result.yaml`.
+Write structured comparison result to `.opensdd/compare.report.yaml`.
 
 **Create output directory if needed:**
 ```bash
@@ -160,7 +160,7 @@ New Functionality (not in spec):
   {item_name} ({file}:{line})
     └─ Consider adding to spec or removing
 
-Full report: .opensdd/compare-result.yaml
+Full report: .opensdd/compare.report.yaml
 ```
 
 Use emoji/symbols for quick visual scanning:
@@ -172,7 +172,7 @@ Use emoji/symbols for quick visual scanning:
 </steps>
 
 <output>
-- `.opensdd/compare-result.yaml` written with full structured diff
+- `.opensdd/compare.report.yaml` written with full structured diff
 - Terminal summary displayed
 </output>
 
@@ -182,14 +182,14 @@ AI self-verification:
 | Step | Expected Output | Status |
 |------|-----------------|--------|
 | load_spec | Spec parsed, components/types/structure extracted | |
-| clean_previous | .opensdd/extracted/ and compare-result.yaml removed | |
+| clean_previous | .opensdd/extracted/ and compare.report.yaml removed | |
 | extract_code | All layer directories extracted to .opensdd/extracted/ | |
 | compare_all | Agent returned full comparison result (JSON) | |
-| write_result | .opensdd/compare-result.yaml written | |
+| write_result | .opensdd/compare.report.yaml written | |
 | display_summary | Terminal summary shown | |
 
 **Verification checks:**
-- [ ] .opensdd/compare-result.yaml exists and is valid YAML
+- [ ] .opensdd/compare.report.yaml exists and is valid YAML
 - [ ] All components from spec.yaml have a status
 - [ ] All extras have classification
 - [ ] Summary counts match detailed results
@@ -205,5 +205,5 @@ No user approval needed. This is a diagnostic tool - run to completion.
 No next phase. Workflow complete after displaying summary.
 
 Speak to user:
-"Comparison complete. See .opensdd/compare-result.yaml for full details."
+"Comparison complete. See .opensdd/compare.report.yaml for full details."
 </next>

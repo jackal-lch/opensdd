@@ -16,6 +16,9 @@ None. This is the first phase.
 
 <input>
 No input from previous phase.
+
+From skill arguments:
+- `review_mode`: Boolean (default: false) - pause after each package for human review
 </input>
 
 <steps>
@@ -97,6 +100,10 @@ Each package will:
   2. Probe (Sonnet) - verify execution
   3. Retry (up to 3 attempts if needed)
 
+Review mode: {ON if review_mode else OFF}
+  {if ON: "You will be prompted after each package to review/continue/abort"}
+  {if OFF: "Auto-continue to next package (use --review to enable review mode)"}
+
 ═══════════════════════════════════════════════════════════════
 Starting build...
 ═══════════════════════════════════════════════════════════════
@@ -109,6 +116,11 @@ Starting build...
 
 <output>
 Loaded manifest with package list and build order, ready for build phase.
+
+Pass to Phase 2:
+- `build_order`: List of package IDs
+- `total_packages`: Count
+- `review_mode`: Boolean flag for per-package review
 </output>
 
 <verify>

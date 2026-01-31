@@ -194,13 +194,17 @@ Phase 4: Review → 1 helper (auto-kept)
 ```
 your-project/
 ├── .opensdd/
-│   ├── blueprint.md       # Product definition
-│   ├── spec.yaml          # Technical contracts (source of truth)
-│   ├── spec-visual.md     # Mermaid diagrams (via /visualize)
-│   ├── compare-result.yaml # Code-spec alignment report (via /compare)
-│   └── extracted/         # Code signatures
+│   ├── blueprint.md        # Product definition (via /blueprint)
+│   ├── spec.yaml           # Technical contracts (via /spec)
+│   ├── spec.visual.md      # Mermaid diagrams (via /visualize)
+│   ├── packages/           # Build packages (via /package)
+│   │   ├── manifest.yaml
+│   │   └── pkg-*.yaml
+│   ├── compare.report.yaml # Code-spec alignment (via /compare)
+│   ├── fix.report.yaml     # Fix audit trail (via /fix)
+│   └── extracted/          # Code signatures (temp)
 └── src/
-    └── ...                # Your code, verified against spec
+    └── ...                 # Your code, verified against spec
 ```
 
 ---
