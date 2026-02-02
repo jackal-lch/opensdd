@@ -110,6 +110,31 @@ probe_result:
 
 Generate and execute a probe script in the **target language**.
 
+**Probe Script Location (MANDATORY):**
+
+All probe scripts MUST be created in `.opensdd/probes/` with standardized naming:
+
+```
+.opensdd/probes/{package_id}_probe.{ext}
+```
+
+| Language | Extension | Example |
+|----------|-----------|---------|
+| TypeScript | `.ts` | `.opensdd/probes/pkg-02-user-service_probe.ts` |
+| JavaScript | `.js` | `.opensdd/probes/pkg-02-user-service_probe.js` |
+| Python | `.py` | `.opensdd/probes/pkg-03-auth_probe.py` |
+| Go | `.go` | `.opensdd/probes/pkg-04-api_probe.go` |
+| Rust | `.rs` | `.opensdd/probes/pkg-05-sdk_probe.rs` |
+
+**Before creating probe script:**
+1. Ensure `.opensdd/probes/` directory exists (create if needed)
+2. Use exact package_id from input (e.g., `pkg-02-user-service`)
+
+**After execution:**
+- Keep the probe script (useful for debugging and re-running)
+- Do NOT delete probe scripts after execution
+- Do NOT create probe scripts anywhere else (not in root, not in src/, not in test/)
+
 **Different packages need different verification:**
 
 | Package Type | What to Verify |
@@ -298,6 +323,20 @@ The probe must verify the code ACTUALLY WORKS, not just returns expected values.
 - Verify REAL side effects (if applicable)
 
 **GREEN means: The code actually works, not just "returns something"**
+
+### Rule 4: Probe Scripts ONLY in `.opensdd/probes/`
+
+**NEVER create probe scripts anywhere else.**
+
+| Allowed | Forbidden |
+|---------|-----------|
+| `.opensdd/probes/pkg-02-user-service_probe.ts` | `probe.ts` (root) |
+| `.opensdd/probes/pkg-03-auth_probe.py` | `tests/probe_auth.py` |
+| | `src/probe_test.ts` |
+| | `probes/test.ts` (wrong folder) |
+| | Any other location |
+
+**Naming format:** `{package_id}_probe.{ext}` - no variations.
 
 ## Summary
 
