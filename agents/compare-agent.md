@@ -9,7 +9,7 @@ Perform complete bidirectional comparison between spec.yaml and extracted code s
 
 ## Purpose
 
-Given spec.yaml (what we expect) and .opensdd/extracted/ directory (what code has), produce a complete diff:
+Given spec.yaml (what we expect) and .opensdd/extracted.yaml (what code has), produce a complete diff:
 - **match**: spec item exists in code with correct signature
 - **drift**: spec item exists in code but signature differs
 - **missing**: spec item has no implementation in code
@@ -20,7 +20,7 @@ Given spec.yaml (what we expect) and .opensdd/extracted/ directory (what code ha
 | Parameter | Description |
 |-----------|-------------|
 | `spec_file` | Path to `.opensdd/spec.yaml` |
-| `extracted_dir` | Path to `.opensdd/extracted/` directory containing extracted YAMLs |
+| `extracted_file` | Path to `.opensdd/extracted.yaml` containing all extracted code signatures |
 
 ## Instructions
 
@@ -38,16 +38,25 @@ Parse and extract:
 - `structure.layers`: layer name → directory mapping
 - `tech_stack.language`: programming language (for idiom translation)
 
-**Load extracted files:**
+**Load extracted file:**
 ```bash
-find {extracted_dir} -name "*.yaml" -type f
+cat {extracted_file}
 ```
 
-For each extracted YAML, parse:
-- `file`: source file path
-- `functions`: list of function signatures
-- `types`: list of type definitions
-- `methods`: list of method signatures
+The extracted.yaml contains:
+- `project`: project name
+- `root`: source root directory
+- `extracted_at`: timestamp
+- `files`: array of file specifications, each with:
+  - `file`: source file path
+  - `package`: module/package name
+  - `imports`: list of import statements (optional)
+  - `types`: array of type definitions, each with `name`, `kind`, `fields`, `methods`, `embeds`, `implements`, `variants`
+  - `functions`: array of standalone functions, each with `signature`, `doc`, `uses`
+  - `methods`: array of methods, each with `signature`, `doc`, `receiver`, `uses`
+  - `constants`: array of constants, each with `name`, `type_name`, `value`, `doc` (optional)
+  - `variables`: array of variables, each with `name`, `type_name`, `doc` (optional)
+  - `errors`: array of error definitions, each with `name`, `message`, `doc` (optional)
 
 ### Step 2: Build Mappings
 
@@ -56,7 +65,7 @@ For each extracted YAML, parse:
 For each component in spec:
 1. Get component's `layer` (e.g., "application")
 2. Get layer directory from `structure.layers` (e.g., "services/")
-3. Find extracted files under `.opensdd/extracted/{layer}/`
+3. Find matching files in `extracted.yaml` by path prefix
 4. Match by naming convention:
    - ComponentName → component_name.py (Python)
    - ComponentName → ComponentName.ts (TypeScript)

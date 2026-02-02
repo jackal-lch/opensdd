@@ -63,25 +63,22 @@ Store these values for later steps.
 Remove old comparison artifacts to ensure fresh comparison.
 
 ```bash
-rm -rf .opensdd/extracted/ .opensdd/compare.report.yaml
+rm -f .opensdd/extracted.yaml .opensdd/compare.report.yaml
 ```
 
 This ensures:
-- No stale extracted files from renamed/deleted source files
+- No stale extracted signatures from renamed/deleted source files
 - No stale comparison result if this run fails mid-way
 </step>
 
 <step n="3" name="extract_code">
-Run spec-extract on each layer directory to get current code signatures.
-
-For each layer in `structure.layers`:
+Run spec-extract on the source root to get current code signatures.
 
 ```bash
-LAYER_PATH="{structure.root}/{layer_directory}"
-spec-extract "$LAYER_PATH" -o ".opensdd/extracted/{layer_name}/"
+spec-extract "{structure.root}" -o ".opensdd/extracted.yaml"
 ```
 
-Collect all generated .yaml files for comparison.
+This produces a single YAML file containing all code signatures for comparison.
 </step>
 
 <step n="4" name="compare_all">
@@ -92,7 +89,7 @@ Task(
   prompt: """
   ## Input
   - spec_file: .opensdd/spec.yaml
-  - extracted_dir: .opensdd/extracted/
+  - extracted_file: .opensdd/extracted.yaml
   """
 )
 
@@ -184,8 +181,8 @@ AI self-verification:
 | Step | Expected Output | Status |
 |------|-----------------|--------|
 | load_spec | Spec parsed, components/types/structure extracted | |
-| clean_previous | .opensdd/extracted/ and compare.report.yaml removed | |
-| extract_code | All layer directories extracted to .opensdd/extracted/ | |
+| clean_previous | .opensdd/extracted.yaml and compare.report.yaml removed | |
+| extract_code | Code signatures extracted to .opensdd/extracted.yaml | |
 | compare_all | Agent returned full comparison result (JSON) | |
 | write_result | .opensdd/compare.report.yaml written | |
 | display_summary | Terminal summary shown | |

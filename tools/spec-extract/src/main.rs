@@ -19,7 +19,7 @@ struct Cli {
     #[arg(default_value = ".")]
     path: PathBuf,
 
-    /// Output path (directory for multi-file mode, file path for --single-file mode)
+    /// Output path (file path by default, directory when --multi-file is set)
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -35,13 +35,13 @@ struct Cli {
     #[arg(long)]
     behavior: bool,
 
-    /// Generate index.yaml file (ignored when --single-file is set)
+    /// Generate index.yaml file (only used with --multi-file)
     #[arg(long, default_value = "true")]
     index: bool,
 
-    /// Output all specs into a single file instead of multiple files
+    /// Output specs into multiple files (one per source file) instead of a single file
     #[arg(long)]
-    single_file: bool,
+    multi_file: bool,
 
     /// Verbose output
     #[arg(short, long)]
@@ -69,21 +69,23 @@ fn main() -> Result<()> {
     let path = &cli.path;
 
     if path.is_file() {
-        // Single file mode (extracting one source file)
-        let output_dir = cli.output.unwrap_or_else(|| PathBuf::from(".opensdd/extracted"));
-        extract_single_file(path, &output_dir, format, &registry, cli.verbose)?;
+        // Single source file: output to single spec file
+        let output_file = cli.output.unwrap_or_else(|| {
+            PathBuf::from(format!(".opensdd/extracted.{}", format.extension()))
+        });
+        extract_single_file(path, &output_file, format, &registry, cli.verbose)?;
     } else if path.is_dir() {
         // Directory mode
-        if cli.single_file {
-            // Single-file output: -o is a file path
+        if cli.multi_file {
+            // Multi-file output: -o is a directory (legacy mode)
+            let output_dir = cli.output.unwrap_or_else(|| PathBuf::from(".opensdd/extracted"));
+            extract_directory_multi(path, &output_dir, format, &registry, lang_filter, cli.verbose, cli.index)?;
+        } else {
+            // Single-file output (default): -o is a file path
             let output_file = cli.output.unwrap_or_else(|| {
                 PathBuf::from(format!(".opensdd/extracted.{}", format.extension()))
             });
             extract_directory_single(path, &output_file, format, &registry, lang_filter, cli.verbose)?;
-        } else {
-            // Multi-file output: -o is a directory
-            let output_dir = cli.output.unwrap_or_else(|| PathBuf::from(".opensdd/extracted"));
-            extract_directory_multi(path, &output_dir, format, &registry, lang_filter, cli.verbose, cli.index)?;
         }
     } else {
         anyhow::bail!("Path does not exist: {}", path.display());
@@ -94,20 +96,41 @@ fn main() -> Result<()> {
 
 fn extract_single_file(
     path: &Path,
-    output_dir: &Path,
+    output_file: &Path,
     format: OutputFormat,
     registry: &PluginRegistry,
     verbose: bool,
 ) -> Result<()> {
-    fs::create_dir_all(output_dir)
-        .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+    // Create parent directory if needed
+    if let Some(parent) = output_file.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+        }
+    }
 
-    match generate_file_spec(path, output_dir, format, registry)? {
-        Some(output_path) => {
+    let source = fs::read_to_string(path)?;
+    match spec_extract::extract_spec(&source, path, registry)? {
+        Some(spec) => {
+            let project_name = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("file")
+                .to_string();
+
+            let extracted_spec = ExtractedSpec {
+                project: project_name,
+                root: path.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
+                extracted_at: Some(chrono::Utc::now().to_rfc3339()),
+                files: vec![spec],
+            };
+
+            write_extracted_spec(&extracted_spec, output_file, format)?;
+
             if verbose {
-                println!("Extracted: {} -> {}", path.display(), output_path.display());
+                println!("Extracted: {} -> {}", path.display(), output_file.display());
             } else {
-                println!("{}", output_path.display());
+                println!("{}", output_file.display());
             }
         }
         None => {

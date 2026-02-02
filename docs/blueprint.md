@@ -634,7 +634,7 @@ architecture:
 
 | Tool | Purpose | Usage |
 |------|---------|-------|
-| `spec-extract` | Extract code signatures to YAML | `spec-extract ./src -o .opensdd/extracted` |
+| `spec-extract` | Extract code signatures to YAML | `spec-extract ./src -o .opensdd/extracted.yaml` |
 
 ### Installing spec-extract
 
@@ -757,7 +757,7 @@ A common question: Why not add a `helpers` section to spec.yaml to track all fun
 | Document | Purpose | When Created | Contains |
 |----------|---------|--------------|----------|
 | `spec.yaml` | **Specification** — what SHOULD exist | Before build | Boundaries, contracts |
-| `extracted/` | **Manifest** — what DOES exist | After build | All signatures |
+| `extracted.yaml` | **Manifest** — what DOES exist | After build | All signatures |
 
 **Key insight:** A specification defines what should exist *before* it exists. Helpers emerge *during* implementation — they're output, not input.
 
@@ -768,7 +768,7 @@ AI implements create_user
     ↓
 AI creates validate_email as a helper
     ↓
-validate_email is in extracted/, not spec.yaml
+validate_email is in extracted.yaml, not spec.yaml
 ```
 
 If we added helpers to spec after implementation, spec would become descriptive (recording what happened) rather than prescriptive (defining what to build). This breaks the "spec is source of truth" principle.
@@ -778,9 +778,9 @@ If we added helpers to spec after implementation, spec would become descriptive 
 | Concern | Handled By |
 |---------|------------|
 | "What should the system do?" | `spec.yaml` (boundaries) |
-| "What does the system contain?" | `extracted/` (manifest) |
+| "What does the system contain?" | `extracted.yaml` (manifest) |
 | "Did code drift from boundaries?" | compare-spec (spec vs code) |
-| "Did implementation change?" | compare extracted/ over time |
+| "Did implementation change?" | compare extracted.yaml over time |
 
 **Why this matters:**
 
@@ -791,8 +791,8 @@ If we added helpers to spec after implementation, spec would become descriptive 
 
 **What about tracking helper drift?**
 
-Helpers are tracked in `extracted/`. To detect helper changes:
-- Compare current `extracted/` against previous version
+Helpers are tracked in `extracted.yaml`. To detect helper changes:
+- Compare current `extracted.yaml` against previous version
 - This is manifest comparison, not spec comparison
 
 The `compare-spec` skill compares boundaries. Implementation details (helpers, infrastructure) are acknowledged as "extras" — code that exists outside spec boundaries. They're classified for understanding, not for spec inclusion.
