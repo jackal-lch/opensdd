@@ -23,14 +23,16 @@
 # 1. Open Claude Code
 claude
 
-# 2. Add marketplace & install plugin
+# 2. Add marketplace
 /plugin marketplace add jackal-lch/opensdd
+
+# 3. Install plugin
 /plugin install opensdd@opensdd-marketplace
 
-# 3. Install spec-extract (separate terminal)
+# 4. Install spec-extract (separate terminal)
 curl -fsSL https://raw.githubusercontent.com/jackal-lch/opensdd/main/scripts/install-spec-extract.sh | bash
 
-# 4. Start building
+# 5. Start building
 /opensdd:blueprint
 ```
 
@@ -117,7 +119,10 @@ claude
 
 ```
 /plugin marketplace add jackal-lch/opensdd
-/plugin install opensdd
+```
+
+```
+/plugin install opensdd@opensdd-marketplace
 ```
 
 Verify with `/opensdd:` — you should see all commands in autocomplete.
