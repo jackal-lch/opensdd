@@ -36,8 +36,12 @@ Generate comprehensive Mermaid diagrams from `spec.yaml` to help users understan
 
 ### Step 1: Verify Prerequisites
 
-Check that `.opensdd/spec.yaml` exists. If not, inform the user:
-> No spec.yaml found. Run `/opensdd:spec` first to generate a specification.
+```bash
+test -f ".opensdd/spec.yaml" && echo "FOUND" || echo "NOT_FOUND"
+```
+
+- If `FOUND`: Proceed to Step 2
+- If `NOT_FOUND`: Tell user "No spec.yaml found. Run `/opensdd:spec` first." and STOP workflow.
 
 ### Step 2: Load Spec
 
