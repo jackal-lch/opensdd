@@ -20,13 +20,13 @@ Build all packages into production-ready code with automated verification.
 | 1 | Initialize | Verify prerequisites, load manifest, display build plan |
 | 2 | Build | Execute build→probe→retry loop for each package |
 
-After build completes, run `/opensdd:compare-spec` to verify overall code-spec alignment.
+After build completes, run `/opensdd:compare` to verify overall code-spec alignment.
 
 ## Usage
 
 ```
-/opensdd:build-spec              # Auto-continue (default)
-/opensdd:build-spec --review     # Pause after each package for human review
+/opensdd:build              # Auto-continue (default)
+/opensdd:build --review     # Pause after each package for human review
 ```
 
 ## Key Principles

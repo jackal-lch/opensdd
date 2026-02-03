@@ -125,7 +125,7 @@ Generate human-readable summary for review.
 {End if}
 ║  Next Steps:                                                          ║
 ║    1. Review packages (optional): cat .opensdd/packages/pkg-XX.yaml   ║
-║    2. Run build: /opensdd:build-spec                                  ║
+║    2. Run build: /opensdd:build                                  ║
 ║                                                                       ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
@@ -148,11 +148,11 @@ Use AskUserQuestionTool:
 - Proceed to build-spec (caller will handle)
 
 **On "Review packages first":**
-- Tell user: "Package files are in .opensdd/packages/. Run /opensdd:build-spec when ready."
+- Tell user: "Package files are in .opensdd/packages/. Run /opensdd:build when ready."
 - END workflow
 
 **On "Stop here":**
-- Tell user: "Packages saved. Run /opensdd:build-spec when ready to build."
+- Tell user: "Packages saved. Run /opensdd:build when ready to build."
 - END workflow
 </step>
 
@@ -204,6 +204,6 @@ Based on user choice:
 - Return to caller to invoke build-spec
 
 **"Review packages first" or "Stop here":**
-- Speak: "Packages ready at .opensdd/packages/. Run /opensdd:build-spec when ready."
+- Speak: "Packages ready at .opensdd/packages/. Run /opensdd:build when ready."
 - END workflow
 </next>

@@ -233,15 +233,13 @@ After user approval:
    - .opensdd/spec.yaml: Source of truth for implementation
    - .opensdd/spec.py: Run `python .opensdd/spec.py validate` to check consistency
 
-   Next steps for spec-driven development:
-   1. AI implements components based on spec.yaml
-   2. Extract signatures from implemented code
-   3. AI compares spec.yaml vs extracted (semantic comparison)
-   4. AI fixes any drift detected
-   5. Loop until aligned
+   Next steps:
+   1. Run `/opensdd:package` to split spec into focused work packages
+   2. Run `/opensdd:build` to build packages into production-ready code
+   3. Run `/opensdd:compare` to verify code-spec alignment
 
-   Note: spec.py handles basic consistency checks.
-   For semantic comparison and drift detection, use AI intelligence."
+   Optional:
+   - Run `/opensdd:visualize` to generate architecture diagrams"
 
 3. No next phase. Workflow complete.
 </next>

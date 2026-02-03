@@ -22,7 +22,7 @@ Returns structured diff:
 
 ### Standalone (User Invoked)
 
-Run `/opensdd:compare-spec` to check alignment anytime:
+Run `/opensdd:compare` to check alignment anytime:
 - Before making changes: "What's the current state?"
 - After modifying spec.yaml: "What needs to change in code?"
 - As diagnostic: "Is my code aligned with spec?"
@@ -32,7 +32,7 @@ Run `/opensdd:compare-spec` to check alignment anytime:
 
 Run manually after `build-spec` completes to verify overall alignment:
 1. build-spec builds and probes all packages
-2. User runs `/opensdd:compare-spec` to check alignment
+2. User runs `/opensdd:compare` to check alignment
 3. Results saved to `.opensdd/compare.report.yaml`
 
 ## Output

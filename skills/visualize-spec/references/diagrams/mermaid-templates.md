@@ -402,7 +402,7 @@ External system connections.
 
 ---
 
-*Regenerate with `/opensdd:visualize-spec`*
+*Regenerate with `/opensdd:visualize`*
 ```
 
 ## Handling Edge Cases

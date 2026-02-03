@@ -1,6 +1,6 @@
 ---
 name: fix-spec
-description: Fix code-spec alignment issues from compare.report.yaml. Automatically fixes drifts and missing items, evaluates extras with strict rules, promotes to spec when justified, or deletes. Human-in-loop only as last resort. Use after `/opensdd:compare-spec` finds issues.
+description: Fix code-spec alignment issues from compare.report.yaml. Automatically fixes drifts and missing items, evaluates extras with strict rules, promotes to spec when justified, or deletes. Human-in-loop only as last resort. Use after `/opensdd:compare` finds issues.
 user-invocable: true
 ---
 

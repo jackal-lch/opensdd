@@ -19,11 +19,11 @@ test -f "blueprint.md" || test -f ".opensdd/blueprint.md" && echo "BLUEPRINT_FOU
 ```
 
 If SPEC_NOT_FOUND:
-- Tell user: "No spec.yaml found. Run `/opensdd:create-spec` first."
+- Tell user: "No spec.yaml found. Run `/opensdd:spec` first."
 - STOP workflow.
 
 If BLUEPRINT_NOT_FOUND:
-- Tell user: "No blueprint.md found. Run `/opensdd:create-blueprint` first."
+- Tell user: "No blueprint.md found. Run `/opensdd:blueprint` first."
 - STOP workflow.
 </prerequisite>
 

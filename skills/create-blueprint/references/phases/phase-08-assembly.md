@@ -438,8 +438,7 @@ On response:
    Next steps:
    1. Review the blueprint with stakeholders
    2. Address any open questions
-   3. Begin technical planning and architecture
-   4. Start building!
+   3. Run `/opensdd:spec` to generate the technical specification
 
    Good luck with your project!"
 

@@ -254,5 +254,5 @@ Results:
 
 Package details: .opensdd/packages/pkg-*.yaml
 
-To check overall code-spec alignment, run: /opensdd:compare-spec"
+To check overall code-spec alignment, run: /opensdd:compare"
 </next>

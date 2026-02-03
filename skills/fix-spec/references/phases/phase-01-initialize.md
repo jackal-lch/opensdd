@@ -45,11 +45,11 @@ fi
 ```
 
 If compare.report.yaml is missing:
-- Show: "Missing: .opensdd/compare.report.yaml. Run /opensdd:compare-spec first."
+- Show: "Missing: .opensdd/compare.report.yaml. Run /opensdd:compare first."
 - STOP workflow.
 
 If spec.yaml is missing:
-- Show: "Missing: .opensdd/spec.yaml. Run /opensdd:create-spec first."
+- Show: "Missing: .opensdd/spec.yaml. Run /opensdd:spec first."
 - STOP workflow.
 
 If blueprint.md is missing:

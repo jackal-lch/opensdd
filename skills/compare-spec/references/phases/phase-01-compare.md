@@ -18,7 +18,7 @@ test -f ".opensdd/spec.yaml" && echo "FOUND" || echo "NOT_FOUND"
 ```
 
 If output is "NOT_FOUND":
-- Tell user: "No spec.yaml found. Run `/opensdd:create-spec` first."
+- Tell user: "No spec.yaml found. Run `/opensdd:spec` first."
 - STOP workflow.
 
 Verify spec-extract tool is installed:

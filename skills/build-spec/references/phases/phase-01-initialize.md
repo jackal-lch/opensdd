@@ -45,7 +45,7 @@ echo "packages: $PKGS"
 ```
 
 If any check fails:
-- Show clear error: "Missing: [file]. Run /opensdd:package-spec first."
+- Show clear error: "Missing: [file]. Run /opensdd:package first."
 - STOP workflow.
 
 If all checks pass:

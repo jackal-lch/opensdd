@@ -15,7 +15,7 @@ Product blueprint should be available (either provided by user or in conversatio
 
 If no blueprint provided:
 - Ask user: "Do you have a product blueprint? If so, please share it or point me to the file."
-- If user has no blueprint: "I recommend running /opensdd:create-blueprint first to create one. Would you like to proceed anyway with what you know about the product?"
+- If user has no blueprint: "I recommend running /opensdd:blueprint first to create one. Would you like to proceed anyway with what you know about the product?"
 </prerequisite>
 
 <input>
