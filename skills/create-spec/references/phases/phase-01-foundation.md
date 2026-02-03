@@ -11,11 +11,15 @@ Establish technical foundation: tech stack, deployment model, language-specific 
 </objective>
 
 <prerequisite>
-Product blueprint should be available (either provided by user or in conversation context).
+**Auto-scan for blueprint first:**
 
-If no blueprint provided:
-- Ask user: "Do you have a product blueprint? If so, please share it or point me to the file."
-- If user has no blueprint: "I recommend running /opensdd:blueprint first to create one. Would you like to proceed anyway with what you know about the product?"
+```bash
+test -f ".opensdd/blueprint.md" && echo "FOUND_OPENSDD" || (test -f "blueprint.md" && echo "FOUND_ROOT" || echo "NOT_FOUND")
+```
+
+- If `FOUND_OPENSDD`: Read `.opensdd/blueprint.md` silently and proceed to step 1
+- If `FOUND_ROOT`: Read `blueprint.md` silently and proceed to step 1
+- If `NOT_FOUND`: Ask user: "No blueprint found at `.opensdd/blueprint.md` or `blueprint.md`. Do you have one elsewhere, or would you like to run `/opensdd:blueprint` first to create one?"
 </prerequisite>
 
 <input>
